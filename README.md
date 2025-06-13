@@ -16,13 +16,7 @@ __Phase 1: Basic Structure__
 
   ```javascript
   /
-  ├── index.html
-  ├── about.html
-  ├── contact.html
-  ├── first_shoot.html
-  ├── standard_agreement.html
   ├── photos/
-  │   └── [album-name]/
   ├── assets/
   │   ├── css/
   │   │   └── style.css
@@ -35,16 +29,16 @@ __Phase 1: Basic Structure__
   │   └── header_partial.html
   │   └── standard_agreement_partial.html
   ├── package.json
-  ├── package-lock.json
   ├── README.md
   ├── base.html.template
-  └── build.js
+  └── scripts/
+      └── build.js
   ```
 
 __Phase 2: Static Album Viewer__
-- Adobe Portfolio style layout: Maximum of 3 images per row, new row only if previous row is full. Images retain original aspect ratio. All images in a row have equal heights. Width (and scaling factor) is determined by scaling the entire row to fill the page or content div width. Consistent margins/padding between all photos.
+- Adobe Portfolio style layout: Maximum of 3 images per row, new row only if previous row is full. Images retain original aspect ratio. All images in a row have equal heights. Width (and scaling factor) is determined by scaling the entire row to fill the page or content div width. Consistent margins/padding between photos.
 
-- [ ] Albums are exported from Lightroom into `photos/[album-name]/` (User needs to provide the images)
+- [ ] Albums are exported from Lightroom into `photos/`
 - [ ] JavaScript scans folders and renders thumbnails + clicking an image should display it in fullscreen or full window
 - [ ] Responsive grid layout for albums using CSS Grid or Flexbox
 
@@ -66,12 +60,9 @@ Here's a more detailed plan with specific steps:
 
 1. __Phase 2: Static Album Viewer__
 
-   - __Provide Sample Images:__ The user needs to export sample images from Lightroom into the `photos/example-album/` directory so I can work on the JavaScript functionality.
-
    - __Implement JavaScript Logic:__ Write JavaScript code in `assets/js/script.js` to:
 
-     - Scan the `photos` directory for album folders.
-     - For each album folder, scan for image files (e.g., `.jpg`, `.jpeg`, `.png`).
+     - Scan the `photos` directory for image files (e.g., `.jpg`, `.jpeg`, `.png`).
      - Create thumbnail elements for each image.
      - Append the thumbnails to the `#album-viewer` div in `index.html`.
 
@@ -100,9 +91,8 @@ Here's a more detailed plan with specific steps:
 
 3. __Phase 4: Hosting and Deployment__
 
-   - __Configure GitHub Pages:__ Ensure GitHub Pages is configured to deploy the website from the `main` branch.
    - __Set Up Custom Domain:__ Add a CNAME file to the repository with the custom domain `photosby.loganwu.co.nz`.
-   - __Deploy Website:__ Push the code to the `main` branch to trigger deployment.
+   - __Deploy Website:__ Push the code to the `gh-pages` branch to trigger deployment.
 
 Here's the plan:
 
@@ -113,7 +103,7 @@ __Phase 1: Basic Structure__
 
 __Phase 2: Static Album Viewer__
 
-- [ ] Albums are exported from Lightroom into `photos/[album-name]/` (User needs to provide the images)
+- [ ] Albums are exported from Lightroom into `photos/`
 - [ ] JavaScript scans folders and renders thumbnails + clicking an image should display it in fullscreen or full window
 - [ ] Responsive grid layout for albums using CSS Grid or Flexbox
 
@@ -133,12 +123,9 @@ Here's a more detailed plan with specific steps:
 
 1. __Phase 2: Static Album Viewer__
 
-   - __Provide Sample Images:__ You need to export sample images from Lightroom into the `photos/example-album/` directory so I can work on the JavaScript functionality.
-
    - __Implement JavaScript Logic:__ Write JavaScript code in `assets/js/script.js` to:
 
-     - Scan the `photos` directory for album folders.
-     - For each album folder, scan for image files (e.g., `.jpg`, `.jpeg`, `.png`).
+     - Scan the `photos` directory for image files (e.g., `.jpg`, `.jpeg`, `.png`).
      - Create thumbnail elements for each image.
      - Append the thumbnails to the `#album-viewer` div in `index.html`.
 
@@ -161,7 +148,6 @@ Here's a more detailed plan with specific steps:
 
 3. __Phase 4: Hosting and Deployment__
 
-   - __Configure GitHub Pages:__ Ensure GitHub Pages is configured to deploy the website from the `main` branch.
    - __Set Up Custom Domain:__ Add a CNAME file to the repository with the custom domain `photosby.loganwu.co.nz`.
    - __Deploy Website:__ Push the code to the `main` branch to trigger deployment.
 
@@ -196,9 +182,61 @@ Here's a more detailed plan with specific steps:
 3.  Run the build script:
 
     ```bash
-    node build.js
+    node scripts/build.js
     ```
 
     This script will generate the `index.html`, `first_shoot.html`, and `standard_agreement.html` files based on the `base.html.template` file and the content in the `standard_agreement_partial.html` and `first_shoot_partial.html` files.
 
 4.  Open the `index.html` file in your browser to view the website.
+
+## 🚀 Deployment
+
+To deploy the site to GitHub Pages manually, follow these steps:
+
+1.  Build the site:
+
+    ```bash
+    node scripts/build.js
+    ```
+
+    This will generate the website files in the `docs` directory.
+
+2.  Copy the contents of the `docs` directory to the root of your repository's `main` branch. You can do this by:
+
+    *   Checking out the `main` branch:
+
+        ```bash
+        git checkout main
+        ```
+
+    *   Deleting all files in the `main` branch (except for this README, .git, .gitignore, base.html.template, build.js, package.json, partials/, photos/, and assets/):
+
+        ```bash
+        git rm -rf !(README.md|.git|.gitignore|base.html.template|build.js|package.json|partials|photos|assets)
+        ```
+
+    *   Copying the contents of the `docs` directory to the root of the `main` branch:
+
+        ```bash
+        cp -r docs/. .
+        ```
+
+    *   Adding the changes:
+
+        ```bash
+        git add .
+        ```
+
+    *   Committing the changes:
+
+        ```bash
+        git commit -m "Deploy to GitHub Pages"
+        ```
+
+    *   Pushing the changes to the `main` branch:
+
+        ```bash
+        git push origin main
+        ```
+
+3.  Your website will be deployed to GitHub Pages within a few minutes.
