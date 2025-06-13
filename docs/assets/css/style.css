@@ -198,12 +198,12 @@ header nav a:hover {
 #lightbox img {
     max-width: 100%;
     max-height: 100%;
+    pointer-events: none; /* Allow clicks to pass through to buttons */
 }
 
-#lightbox .close-button {
+#lightbox .close-button,
+#lightbox .nav-button {
     position: absolute;
-    top: 18px;
-    right: 20px;
     color: var(--white);
     font-size: 36px;
     cursor: pointer;
@@ -216,6 +216,23 @@ header nav a:hover {
     display: flex;
     align-items: center;
     justify-content: center;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1001; /* Ensure buttons are above the image */
+}
+
+#lightbox .close-button {
+    top: 18px;
+    right: 20px;
+    transform: none; /* Override translateY for close button */
+}
+
+#lightbox .prev-button {
+    left: 20px;
+}
+
+#lightbox .next-button {
+    right: 20px;
 }
 
 .grid__row {

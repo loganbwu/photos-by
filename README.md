@@ -1,242 +1,78 @@
 # Photos by Logan Wu
 
-**Note:** The `index.html` file is automatically generated from `index.html.template`. Do not modify `index.html` directly; instead, edit `index.html.template` and run `build.js` to regenerate the `index.html` file.
+A lightweight, static photography portfolio website showcasing pole dance and aerial arts event photography and photoshoots. Hosted on GitHub Pages, this site is designed for easy maintenance and efficient display of visual content.
 
-This is the source code for my photography portfolio website, hosted on [photosby.loganwu.co.nz](https://photosby.loganwu.co.nz) via GitHub Pages. It showcases my work with pole dance and aerial arts studios, where I do event photography and run photoshoots. The site is lightweight, static, and easy to maintain.
+## ✨ Features
 
----
+*   **Dynamic Image Gallery:** Automatically generates image thumbnails and displays full-size images in a responsive grid.
+*   **Lightbox Viewer:** Full-screen image viewing with navigation.
+    *   Left/Right arrow key navigation (desktop).
+    *   On-screen previous/next buttons (desktop & mobile).
+    *   Swipe gestures for navigation (mobile).
+*   **Responsive Design:** Optimized for various screen sizes, from mobile devices to large desktops.
+*   **Minimal UI:** Clean and professional user interface built with pure CSS.
+*   **Automated Build Process:** Uses a Node.js script to generate HTML files from templates and image directories.
 
-## 🧭 Development Plan
+## 🚀 Getting Started
 
-__Phase 1: Basic Structure__
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
-- [x] Set up repo and GitHub Pages configuration (This is assumed to be done)
+### Prerequisites
 
-- [x] Create folder structure: (Completed)
+Ensure you have [Node.js](https://nodejs.org/) installed on your system.
 
-  ```javascript
-  /
-  ├── photos/
-  ├── assets/
-  │   ├── css/
-  │   │   └── style.css
-  │   └── js/
-  │       └── script.js
-  ├── partials/
-  │   ├── contact_partial.html
-  │   ├── first_shoot_partial.html
-  │   ├── footer_partial.html
-  │   └── header_partial.html
-  │   └── standard_agreement_partial.html
-  ├── package.json
-  ├── README.md
-  ├── base.html.template
-  └── scripts/
-      └── build.js
-  ```
+### Installation
 
-__Phase 2: Static Album Viewer__
-- Adobe Portfolio style layout: Maximum of 3 images per row, new row only if previous row is full. Images retain original aspect ratio. All images in a row have equal heights. Width (and scaling factor) is determined by scaling the entire row to fill the page or content div width. Consistent margins/padding between photos.
-
-- [ ] Albums are exported from Lightroom into `photos/`
-- [ ] JavaScript scans folders and renders thumbnails + clicking an image should display it in fullscreen or full window
-- [ ] Responsive grid layout for albums using CSS Grid or Flexbox
-
-- [ ] Implement fullscreen or full window viewer
-
-__Phase 3: Styling__
-
-- [ ] Clean, minimal UI using CSS only (no frameworks)
-- [ ] Font pairing and consistent color palette for a professional look
-- [ ] Mobile-friendly and retina-optimized
-
-__Phase 4: Hosting and Deployment__
-
-- [x] Deploy via GitHub Pages
-- [x] Use `photosby.loganwu.co.nz` as custom domain (via CNAME file)
-- [ ] Push to `main` branch triggers deployment
-
-Here's a more detailed plan with specific steps:
-
-1. __Phase 2: Static Album Viewer__
-
-   - __Implement JavaScript Logic:__ Write JavaScript code in `assets/js/script.js` to:
-
-     - Scan the `photos` directory for image files (e.g., `.jpg`, `.jpeg`, `.png`).
-     - Create thumbnail elements for each image.
-     - Append the thumbnails to the `#album-viewer` div in `index.html`.
-
-   (Not yet implemented)
-
-   - __Implement Fullscreen Image Display:__ Add functionality to display the full-size image in fullscreen or full window when a thumbnail is clicked.
-
-   - __Implement Responsive Grid Layout:__ Use CSS Grid or Flexbox in `assets/css/style.css` to create a responsive grid layout for the album thumbnails.
-
-## 📸 Available Albums
-
-- polefolio
-
-2. __Phase 3: Styling__
-
-   - __Choose Font Pairing:__ Select appropriate font pairings for headings and body text.
-
-   - __Define Color Palette:__ Define a consistent color palette for the website.
-
-   - __Implement CSS Styles:__ Add CSS styles to `assets/css/style.css` to:
-
-     - Create a clean, minimal UI.
-     - Apply the chosen font pairings and color palette.
-     - Make the website mobile-friendly using media queries.
-     - Optimize for retina displays.
-
-3. __Phase 4: Hosting and Deployment__
-
-   - __Set Up Custom Domain:__ Add a CNAME file to the repository with the custom domain `photosby.loganwu.co.nz`.
-   - __Deploy Website:__ Push the code to the `gh-pages` branch to trigger deployment.
-
-Here's the plan:
-
-__Phase 1: Basic Structure__
-
-- [x] Set up repo and GitHub Pages configuration (This is assumed to be done)
-- [x] Create folder structure: (Completed)
-
-__Phase 2: Static Album Viewer__
-
-- [ ] Albums are exported from Lightroom into `photos/`
-- [ ] JavaScript scans folders and renders thumbnails + clicking an image should display it in fullscreen or full window
-- [ ] Responsive grid layout for albums using CSS Grid or Flexbox
-
-__Phase 3: Styling__
-
-- [ ] Clean, minimal UI using CSS only (no frameworks)
-- [ ] Font pairing and consistent color palette for a professional look
-- [ ] Mobile-friendly and retina-optimized
-
-__Phase 4: Hosting and Deployment__
-
-- [x] Deploy via GitHub Pages
-- [x] Use `photosby.loganwu.co.nz` as custom domain (via CNAME file)
-- [ ] Push to `main` branch triggers deployment
-
-Here's a more detailed plan with specific steps:
-
-1. __Phase 2: Static Album Viewer__
-
-   - __Implement JavaScript Logic:__ Write JavaScript code in `assets/js/script.js` to:
-
-     - Scan the `photos` directory for image files (e.g., `.jpg`, `.jpeg`, `.png`).
-     - Create thumbnail elements for each image.
-     - Append the thumbnails to the `#album-viewer` div in `index.html`.
-
-   - __Implement Fullscreen Image Display:__ Add functionality to display the full-size image in fullscreen or full window when a thumbnail is clicked.
-
-   - __Implement Responsive Grid Layout:__ Use CSS Grid or Flexbox in `assets/css/style.css` to create a responsive grid layout for the album thumbnails.
-
-2. __Phase 3: Styling__
-
-   - __Choose Font Pairing:__ Select appropriate font pairings for headings and body text.
-
-   - __Define Color Palette:__ Define a consistent color palette for the website.
-
-   - __Implement CSS Styles:__ Add CSS styles to `assets/css/style.css` to:
-
-     - Create a clean, minimal UI.
-     - Apply the chosen font pairings and color palette.
-     - Make the website mobile-friendly using media queries.
-     - Optimize for retina displays.
-
-3. __Phase 4: Hosting and Deployment__
-
-   - __Set Up Custom Domain:__ Add a CNAME file to the repository with the custom domain `photosby.loganwu.co.nz`.
-   - __Deploy Website:__ Push the code to the `main` branch to trigger deployment.
-
-
----
-
-## 🧰 Tech Stack
-
-- HTML5
-- CSS3
-- Vanilla JavaScript
-- image-size
-- GitHub Pages (static hosting)
-
----
-
-## 🧑‍💻 Developer Workflow
-
-1.  Clone the repo:
-
+1.  **Clone the repository:**
     ```bash
     git clone https://github.com/loganbu/photography-portfolio.git
     cd photography-portfolio
     ```
 
-2.  Install dependencies:
-
+2.  **Install dependencies:**
     ```bash
-    npm install image-size
+    npm install
     ```
 
-3.  Run the build script:
+### Usage
 
-    ```bash
-    node scripts/build.js
-    ```
-
-    This script will generate the `index.html`, `first_shoot.html`, and `standard_agreement.html` files based on the `base.html.template` file and the content in the `standard_agreement_partial.html` and `first_shoot_partial.html` files.
-
-4.  Open the `index.html` file in your browser to view the website.
-
-## 🚀 Deployment
-
-To deploy the site to GitHub Pages manually, follow these steps:
-
-1.  Build the site:
-
+1.  **Build the website:**
+    Run the build script to generate the static HTML files in the `docs/` directory.
     ```bash
     node scripts/build.js
     ```
+    **Note:** The `index.html` and other content pages in `docs/` are automatically generated. Do not modify them directly. Instead, edit `base.html.template` or the partials in `partials/` and then run `node scripts/build.js` to regenerate.
 
-    This will generate the website files in the `docs` directory.
+2.  **View the website locally:**
+    Open the generated `index.html` file in your web browser.
+    ```bash
+    open docs/index.html
+    ```
 
-2.  Copy the contents of the `docs` directory to the root of your repository's `main` branch. You can do this by:
+## 🌐 Deployment
 
-    *   Checking out the `main` branch:
+This site is deployed via GitHub Pages from the `docs/` directory of the `main` branch.
 
-        ```bash
-        git checkout main
-        ```
+To deploy changes:
+1.  Ensure all local changes are committed to your `main` branch.
+2.  Run the build script: `node scripts/build.js`
+3.  Push your `main` branch to GitHub. GitHub Pages will automatically deploy the content from the `docs/` directory.
 
-    *   Deleting all files in the `main` branch (except for this README, .git, .gitignore, base.html.template, build.js, package.json, partials/, photos/, and assets/):
+## 🧰 Tech Stack
 
-        ```bash
-        git rm -rf !(README.md|.git|.gitignore|base.html.template|build.js|package.json|partials|photos|assets)
-        ```
+*   **Frontend:** HTML5, CSS3, Vanilla JavaScript
+*   **Build Tooling:** Node.js (for `scripts/build.js`)
+*   **Image Processing:** `image-size` npm package
+*   **Hosting:** GitHub Pages
 
-    *   Copying the contents of the `docs` directory to the root of the `main` branch:
+## 🤝 Contributing
 
-        ```bash
-        cp -r docs/. .
-        ```
+Contributions are welcome! Please feel free to open an issue or submit a pull request.
 
-    *   Adding the changes:
+## 📄 License
 
-        ```bash
-        git add .
-        ```
+This project is licensed under the MIT License - see the `LICENSE` file for details (if applicable).
 
-    *   Committing the changes:
+## 📞 Contact
 
-        ```bash
-        git commit -m "Deploy to GitHub Pages"
-        ```
-
-    *   Pushing the changes to the `main` branch:
-
-        ```bash
-        git push origin main
-        ```
-
-3.  Your website will be deployed to GitHub Pages within a few minutes.
+For any inquiries, please refer to the contact information on the website.
