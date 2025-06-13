@@ -227,11 +227,11 @@ header nav a:hover {
     transform: none; /* Override translateY for close button */
 }
 
-#lightbox .prev-button {
+#lightbox .left-button {
     left: 20px;
 }
 
-#lightbox .next-button {
+#lightbox .right-button {
     right: 20px;
 }
 
