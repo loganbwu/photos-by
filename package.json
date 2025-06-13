@@ -1,0 +1,16 @@
+{
+  "name": "photography-portfolio",
+  "version": "1.0.0",
+  "description": "This is the source code for my photography portfolio website, hosted on [photosby.loganwu.co.nz](https://photosby.loganwu.co.nz) via GitHub Pages. It showcases my work with pole dance and aerial arts studios, where I do event photography and run photoshoots. The site is lightweight, static, and easy to maintain.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node scripts/build.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "image-size": "^2.0.2"
+  }
+}
