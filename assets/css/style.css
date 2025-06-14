@@ -111,8 +111,8 @@ header nav a:hover {
         width: 100%;
     }
 
-    .grid__item-container {
-        padding: 2px !important;
+    #album-viewer {
+        --gallery-spacing: 4px; /* Mobile: results in 2px padding on items, 4px between rows */
     }
 
     .header__empty {
@@ -154,7 +154,8 @@ header nav a:hover {
 }
 
 .grid__item-container {
-  padding: 5px; /* Adjust as needed */
+  /* padding: 5px; */ /* Replaced by CSS variable */
+  padding: calc(var(--gallery-spacing, 10px) / 2); /* Default to 10px gap if variable not set */
   box-sizing: border-box;
 }
 
@@ -173,6 +174,7 @@ header nav a:hover {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
+  --gallery-spacing: 10px; /* Default: results in 5px padding on items, 10px between rows */
 }
 
 #lightbox {
@@ -238,6 +240,12 @@ header nav a:hover {
 .grid__row {
   display: flex;
   width: 100%;
+  /* Spacing between rows, removed for the last row */
+}
+
+.grid__row:not(:last-child) {
+  margin-bottom: 0px;
+  /*margin-bottom: var(--gallery-spacing, 10px); /* Default to 10px gap if variable not set */
 }
 
 .top-links {
@@ -292,7 +300,6 @@ footer .copyright {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start; /* Aligns images to the start */
-  gap: 8px; /* Space between images */
   padding: 8px 0; /* Padding for the container itself */
 }
 
