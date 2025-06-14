@@ -43,15 +43,28 @@ document.addEventListener('keydown', function(event) {
   }
 });
 
-// Event listeners for navigation buttons
-document.addEventListener('DOMContentLoaded', () => {
+// Function to initialize lightbox state and listeners for gallery images
+// Make it globally accessible for gallery.js
+window.initializeLightboxStateAndListeners = function() {
+  images = []; // Clear existing images before repopulating
   const galleryImages = document.querySelectorAll('.grid__item-image');
   galleryImages.forEach((img, index) => {
     images.push(img.src); // Populate the images array
-    img.addEventListener('click', () => {
-      openLightbox(img.src, index);
-    });
+    // Remove any old listener before adding a new one to prevent duplicates if this function is called multiple times
+    img.removeEventListener('click', openLightboxOnClick); // Use a named function for removal
+    img.addEventListener('click', function() { openLightboxOnClick(img.src, index); });
   });
+}
+
+// Named function for the event listener to allow removal
+function openLightboxOnClick(src, index) {
+  openLightbox(src, index);
+}
+
+// Event listeners for general lightbox functionality (nav buttons, escape key)
+document.addEventListener('DOMContentLoaded', () => {
+  // Initial setup for gallery images - will be re-run by gallery.js after it renders
+  initializeLightboxStateAndListeners();
 
   const prevButton = document.getElementById('prev-button');
   const nextButton = document.getElementById('next-button');

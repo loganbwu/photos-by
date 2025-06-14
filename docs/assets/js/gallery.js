@@ -140,6 +140,11 @@ function renderGallery() {
         galleryNode.appendChild(rowElement);
     });
 
+    // Re-initialize lightbox state and listeners after gallery is rendered
+    if (typeof window.initializeLightboxStateAndListeners === 'function') {
+        window.initializeLightboxStateAndListeners();
+    }
+
     // Re-initialize lazy loading if applicable
     // if (typeof window.reinitLazyLoad === 'function') {
     //     window.reinitLazyLoad();
