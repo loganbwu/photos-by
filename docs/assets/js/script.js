@@ -87,12 +87,3 @@ document.addEventListener('DOMContentLoaded', () => {
     touchEndX = 0;
   });
 });
-
-// Mobile navigation
-const burger = document.querySelector('.header__burger'); // Burger icon
-const nav = document.getElementById('mobile-nav'); // Navigation menu
-
-// Event listener to toggle the navigation menu on burger icon click
-burger.addEventListener('click', () => {
-  nav.style.display = nav.style.display === 'block' ? 'none' : 'block'; // Toggle the display of the navigation menu
-});
