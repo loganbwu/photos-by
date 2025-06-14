@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const sizeOf = require('image-size').imageSize;
 
 // Define paths
 const directoryPath = path.join('photos');
@@ -45,45 +44,15 @@ const contactContent = readFileContent(contactPartialPath);
   const filelist = files.filter(file => file.endsWith('.jpg') || file.endsWith('.jpeg') || file.endsWith('.png'));
   console.log('Files found in directory: ' + filelist);
 
-  // Calculate aspect ratios
-  const aspectRatios = {};
-  filelist.forEach(file => {
-    try {
-      const imagePath = path.join(directoryPath, file);
-      const buffer = fs.readFileSync(imagePath);
-      const dimensions = sizeOf(buffer);
-      aspectRatios[file] = dimensions.width / dimensions.height;
-    } catch (err) {
-      console.log(`Error getting dimensions for ${file}: ${err}`);
-      aspectRatios[file] = 1; // Default aspect ratio
-    }
-  });
-
   // Generate thumbnail HTML
-  let thumbnailHTML = '';
-  const rows = [];
-  for (let i = 0; i < filelist.length; i += 3) {
-    rows.push(filelist.slice(i, i + 3));
-  }
-
-  rows.forEach(row => {
-    thumbnailHTML += `<div class="grid__row">`;
-    const rowAspectRatioSum = row.reduce((sum, imageFile) => sum + aspectRatios[imageFile], 0);
-
-    row.forEach(imageFile => {
-      const aspectRatio = aspectRatios[imageFile];
-      const flexBasis = (aspectRatio / rowAspectRatioSum) * 100;
-
-      console.log(`${imageFile}: aspectRatio=${aspectRatio}, flexBasis=${flexBasis}`);
-
-      thumbnailHTML += `
-        <div class="grid__item-container js-grid-item-container" style="flex-basis: ${flexBasis}%;">
-          <img src="photos/${imageFile}" alt="${imageFile}" class="grid__item-image js-grid__item-image grid__item-image-lazy js-lazy" style="aspect-ratio: ${aspectRatio}; height: 100%; object-fit: cover;" onclick="openLightbox('photos/${imageFile}')">
-        </div>
-      `;
-    });
-    thumbnailHTML += `</div>`;
+  let thumbnailHTML = '<div id="image-gallery-container" class="image-gallery-container">'; // Container for the client-side script
+  filelist.forEach(imageFile => {
+    // Add original classes that might be used by lightbox or lazy loading, plus the new source class
+    thumbnailHTML += `
+      <img src="photos/${imageFile}" alt="${imageFile}" class="gallery-image-source grid__item-image-lazy js-lazy" onclick="openLightbox('photos/${imageFile}')">
+    `;
   });
+  thumbnailHTML += `</div>`;
 
   // Read template file
   fs.readFile(templatePath, 'utf8', function (err, data) {

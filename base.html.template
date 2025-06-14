@@ -33,6 +33,6 @@
   </span>
 </div>
 <script src="assets/js/script.js"></script>
-
+    <script src="assets/js/gallery.js"></script>
 </body>
 </html>

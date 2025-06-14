@@ -11,6 +11,5 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "image-size": "^2.0.2"
   }
 }
