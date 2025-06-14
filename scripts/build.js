@@ -182,6 +182,11 @@ async function buildSite() {
     await copyDirectoryRecursive(SRC_DIR.photos, PHOTOS_BUILD_DIR);
     console.log('Photos copied.');
 
+    // 6. Create CNAME file
+    const cnamePath = path.join(BUILD_DIR, 'CNAME');
+    await writeFileContent(cnamePath, 'photosby.loganwu.co.nz');
+    console.log('CNAME file created.');
+
     console.log('Build process completed successfully!');
 }
 
