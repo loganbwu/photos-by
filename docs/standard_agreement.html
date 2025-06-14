@@ -8,25 +8,25 @@
 </head>
 <body>
   <header>
-    <div class="header__nav">
-    <div id="mobile-nav">
-        <nav>
-            <a href="index.html">WORK</a>
-            <a href="first_shoot.html">FIRST SHOOT?</a>
-            <a href="standard_agreement.html">STANDARD AGREEMENT</a>
-            <a href="contact.html">CONTACT</a>
-        </nav>
+    <nav class="header__nav" aria-label="Main navigation">
+    <div id="mobile-nav"> <!-- This div might be for JS toggling, keep for now -->
+        <a href="first_shoot.html">FIRST SHOOT?</a>
+        <a href="standard_agreement.html">STANDARD AGREEMENT</a>
+        <a href="contact.html">CONTACT</a>
     </div>
-</div>
+</nav>
 <div class="header__title">
-    <h1>Logan Wu</h1>
+    <!-- The H1 for the site title/name is often in the main template or a specific branding partial.
+         If this header is purely for navigation, this H1 might be better placed elsewhere.
+         For now, keeping it as per original structure. -->
+    <h1><a href="index.html" class="header__title-link">Logan Wu</a></h1>
 </div>
-<div class="header__empty"></div>
+<div class="header__empty"></div> <!-- This seems to be a spacer, might be achievable with CSS flex properties on the parent -->
 
   </header>
   <main>
     <div id="album-viewer" class="grid-main">
-          <div id="standard-agreement">
+          <article id="standard-agreement">
         <h1>Standard Agreement</h1>
         <p>By signing up for the shoot, you (the client or performer) enter into this agreement with me (the photographer):</p>
 
@@ -63,7 +63,7 @@
         <p>You are free to take and share any photos/videos of the shoot process, as long as everyone in them consents!</p>
 
         <h2>Any questions? Just ask!</h2>
-    </div>
+    </article>
 
     </div>
   </main>

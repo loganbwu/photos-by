@@ -1,126 +1,192 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 
-// Define paths
-const directoryPath = path.join('photos');
-const buildDir = path.join('docs');
-const indexPath = path.join(buildDir, 'index.html');
-const standardAgreementPath = path.join(buildDir, 'standard_agreement.html');
-const firstShootPath = path.join(buildDir, 'first_shoot.html');
-const contactPath = path.join(buildDir, 'contact.html');
-const templatePath = path.join('base.html.template');
-const partialsPath = path.join('partials');
-const assetsPath = path.join('assets');
-const photosPath = 'photos';
-const standardAgreementPartialPath = path.join('partials', 'standard_agreement_partial.html');
-const firstShootPartialPath = path.join('partials', 'first_shoot_partial.html');
-const headerPartialPath = path.join('partials', 'header_partial.html');
-const footerPartialPath = path.join('partials', 'footer_partial.html');
-const contactPartialPath = path.join('partials', 'contact_partial.html');
+// --- Configuration ---
+const SRC_DIR = {
+    photos: 'photos',
+    partials: 'partials',
+    assets: 'assets',
+    templates: '.', // base.html.template is in the root
+};
 
-// Helper function to read file content
-function readFileContent(filePath) {
-  try {
-    return fs.readFileSync(filePath, 'utf8');
-  } catch (err) {
-    console.error(`Unable to read ${filePath}: ${err}`);
-    return '';
-  }
+const BUILD_DIR = 'docs';
+const ASSETS_BUILD_DIR = path.join(BUILD_DIR, 'assets');
+const PHOTOS_BUILD_DIR = path.join(BUILD_DIR, 'photos');
+
+const TEMPLATE_FILE = 'base.html.template';
+
+const PARTIAL_FILES = {
+    header: 'header_partial.html',
+    footer: 'footer_partial.html',
+    contact: 'contact_partial.html',
+    firstShoot: 'first_shoot_partial.html',
+    standardAgreement: 'standard_agreement_partial.html',
+};
+
+const PAGES = [
+    {
+        name: 'index.html',
+        contentKey: 'gallery', // Special key for gallery content
+    },
+    {
+        name: 'contact.html',
+        contentKey: 'contact',
+        partial: PARTIAL_FILES.contact,
+    },
+    {
+        name: 'first_shoot.html',
+        contentKey: 'firstShoot',
+        partial: PARTIAL_FILES.firstShoot,
+    },
+    {
+        name: 'standard_agreement.html',
+        contentKey: 'standardAgreement',
+        partial: PARTIAL_FILES.standardAgreement,
+    },
+];
+
+// --- Helper Functions ---
+
+async function readFileContent(filePath, isCritical = true) {
+    try {
+        return await fs.readFile(filePath, 'utf8');
+    } catch (err) {
+        console.error(`Error reading file ${filePath}:`, err.message);
+        if (isCritical) {
+            throw err; // Re-throw if critical, allowing build to fail
+        }
+        return ''; // Return empty for non-critical files (e.g., optional partials)
+    }
 }
 
-// Read partial content
-const standardAgreementContent = readFileContent(standardAgreementPartialPath);
-const firstShootContent = readFileContent(firstShootPartialPath);
-const headerContent = readFileContent(headerPartialPath);
-const footerContent = readFileContent(footerPartialPath);
-const contactContent = readFileContent(contactPartialPath);
+async function writeFileContent(filePath, content) {
+    try {
+        await fs.writeFile(filePath, content, 'utf8');
+        console.log(`${path.basename(filePath)} updated successfully!`);
+    } catch (err) {
+        console.error(`Error writing file ${filePath}:`, err.message);
+        throw err;
+    }
+}
 
-// Read filelist.json
-  fs.readdir(directoryPath, function (err, files) {
-  if (err) {
-    return console.log('Unable to scan directory: ' + err);
-  }
+async function copyDirectoryRecursive(sourceDir, targetDir) {
+    try {
+        await fs.mkdir(targetDir, { recursive: true });
+        const entries = await fs.readdir(sourceDir, { withFileTypes: true });
+        for (const entry of entries) {
+            const srcPath = path.join(sourceDir, entry.name);
+            const destPath = path.join(targetDir, entry.name);
+            if (entry.isDirectory()) {
+                await copyDirectoryRecursive(srcPath, destPath);
+            } else {
+                await fs.copyFile(srcPath, destPath);
+            }
+        }
+    } catch (err) {
+        console.error(`Error copying directory ${sourceDir} to ${targetDir}:`, err.message);
+        throw err;
+    }
+}
 
-  const filelist = files.filter(file => file.endsWith('.jpg') || file.endsWith('.jpeg') || file.endsWith('.png'));
-  console.log('Files found in directory: ' + filelist);
+async function getImageFiles(directory) {
+    try {
+        const files = await fs.readdir(directory);
+        return files.filter(file => /\.(jpg|jpeg|png)$/i.test(file));
+    } catch (err) {
+        console.error(`Error scanning image directory ${directory}:`, err.message);
+        throw err; // Image directory is critical
+    }
+}
 
-  // Generate thumbnail HTML
-  let thumbnailHTML = '<div id="image-gallery-container" class="image-gallery-container">'; // Container for the client-side script
-  filelist.forEach(imageFile => {
-    // Add original classes that might be used by lightbox or lazy loading, plus the new source class
-    thumbnailHTML += `
-      <img src="photos/${imageFile}" alt="${imageFile}" class="gallery-image-source grid__item-image-lazy js-lazy" onclick="openLightbox('photos/${imageFile}')">
-    `;
-  });
-  thumbnailHTML += `</div>`;
+function generateGalleryHTML(imageFiles) {
+    let html = '<div id="image-gallery-container" class="image-gallery-container">';
+    imageFiles.forEach(imageFile => {
+        html += `
+      <img src="${path.join(SRC_DIR.photos, imageFile)}" alt="${imageFile}" class="gallery-image-source grid__item-image-lazy js-lazy" onclick="openLightbox('${path.join(SRC_DIR.photos, imageFile)}')">`;
+    });
+    html += `
+    </div>`;
+    return html;
+}
 
-  // Read template file
-  fs.readFile(templatePath, 'utf8', function (err, data) {
-    if (err) {
-      return console.log('Unable to read base.html.template: ' + err);
+async function loadPartials() {
+    const loadedPartials = {};
+    for (const key in PARTIAL_FILES) {
+        const partialPath = path.join(SRC_DIR.partials, PARTIAL_FILES[key]);
+        // Header and Footer are critical, others might be optional depending on design
+        const isCriticalPartial = key === 'header' || key === 'footer';
+        loadedPartials[key] = await readFileContent(partialPath, isCriticalPartial);
+    }
+    return loadedPartials;
+}
+
+// --- Main Build Logic ---
+
+async function buildSite() {
+    console.log('Starting build process...');
+
+    // 1. Ensure build directory exists
+    try {
+        await fs.mkdir(BUILD_DIR, { recursive: true });
+        console.log(`Build directory '${BUILD_DIR}' ensured.`);
+    } catch (err) {
+        console.error('Failed to create build directory:', err.message);
+        return; // Exit if we can't create the main build directory
     }
 
-    console.log('Original base.html.template content: ' + data);
+    // 2. Load base template and common partials
+    const baseTemplatePath = path.join(SRC_DIR.templates, TEMPLATE_FILE);
+    const baseTemplateContent = await readFileContent(baseTemplatePath);
+    if (!baseTemplateContent) return; // Exit if base template fails to load
 
-    // Replace placeholders
-    const newIndexHTML = data.replace('<!-- HEADER_PLACEHOLDER -->', headerContent)
-      .replace('<!-- FOOTER_PLACEHOLDER -->', footerContent)
-      .replace('<!-- CONTENT_PLACEHOLDER -->', thumbnailHTML);
-
-    const newFirstShootHTML = data.replace('<!-- HEADER_PLACEHOLDER -->', headerContent)
-      .replace('<!-- FOOTER_PLACEHOLDER -->', footerContent)
-      .replace('<!-- CONTENT_PLACEHOLDER -->', firstShootContent);
-
-    const newStandardAgreementHTML = data.replace('<!-- HEADER_PLACEHOLDER -->', headerContent)
-      .replace('<!-- FOOTER_PLACEHOLDER -->', footerContent)
-      .replace('<!-- CONTENT_PLACEHOLDER -->', standardAgreementContent);
-
-    const newContactHTML = data.replace('<!-- HEADER_PLACEHOLDER -->', headerContent)
-      .replace('<!-- FOOTER_PLACEHOLDER -->', footerContent)
-      .replace('<!-- CONTENT_PLACEHOLDER -->', contactContent);
-
-    // Write updated files
-    // Create the build directory if it doesn't exist
-    if (!fs.existsSync(buildDir)) {
-      fs.mkdirSync(buildDir, { recursive: true });
+    const partials = await loadPartials();
+    if (!partials.header || !partials.footer) {
+        console.error('Critical header or footer partial missing. Aborting build.');
+        return;
+    }
+    
+    // 3. Prepare gallery content (if needed for index page)
+    let galleryHTML = '';
+    if (PAGES.some(page => page.contentKey === 'gallery')) {
+        const imageFiles = await getImageFiles(SRC_DIR.photos);
+        console.log(`Found ${imageFiles.length} images.`);
+        galleryHTML = generateGalleryHTML(imageFiles);
     }
 
-    // Copy assets directory
-    fs.cpSync(assetsPath, path.join(buildDir, 'assets'), { recursive: true });
+    // 4. Build each page
+    for (const page of PAGES) {
+        let pageSpecificContent = '';
+        if (page.contentKey === 'gallery') {
+            pageSpecificContent = galleryHTML;
+        } else if (page.partial && partials[page.contentKey]) {
+            pageSpecificContent = partials[page.contentKey];
+        } else if (page.partial) {
+            console.warn(`Partial for page ${page.name} (key: ${page.contentKey}) not found or failed to load. Page might be incomplete.`);
+        }
 
-    // Copy photos directory
-    fs.cpSync(photosPath, path.join(buildDir, 'photos'), { recursive: true });
+        const pageHtml = baseTemplateContent
+            .replace('<!-- HEADER_PLACEHOLDER -->', partials.header)
+            .replace('<!-- FOOTER_PLACEHOLDER -->', partials.footer)
+            .replace('<!-- CONTENT_PLACEHOLDER -->', pageSpecificContent);
 
-    fs.writeFile(indexPath, newIndexHTML, function (err) {
-      if (err) {
-        return console.log('Unable to write index.html: ' + err);
-      }
-      console.log('index.html updated successfully!');
-      console.log('index.html rebuilt!');
-    });
+        const outputPath = path.join(BUILD_DIR, page.name);
+        await writeFileContent(outputPath, pageHtml);
+    }
 
-    fs.writeFile(firstShootPath, newFirstShootHTML, function (err) {
-      if (err) {
-        return console.log('Unable to write first_shoot.html: ' + err);
-      }
-      console.log('first_shoot.html updated successfully!');
-      console.log('first_shoot.html rebuilt!');
-    });
+    // 5. Copy assets and photos
+    console.log('Copying assets...');
+    await copyDirectoryRecursive(SRC_DIR.assets, ASSETS_BUILD_DIR);
+    console.log('Assets copied.');
 
-    fs.writeFile(standardAgreementPath, newStandardAgreementHTML, function (err) {
-      if (err) {
-        return console.log('Unable to write standard_agreement.html: ' + err);
-      }
-      console.log('standard_agreement.html updated successfully!');
-      console.log('standard_agreement.html rebuilt!');
-    });
+    console.log('Copying photos...');
+    await copyDirectoryRecursive(SRC_DIR.photos, PHOTOS_BUILD_DIR);
+    console.log('Photos copied.');
 
-    fs.writeFile(contactPath, newContactHTML, function (err) {
-      if (err) {
-        return console.log('Unable to write contact.html: ' + err);
-      }
-      console.log('contact.html updated successfully!');
-      console.log('contact.html rebuilt!');
-    });
-  });
+    console.log('Build process completed successfully!');
+}
+
+// --- Run Build ---
+buildSite().catch(err => {
+    console.error('Unhandled error during build process:', err.message);
+    process.exit(1); // Exit with error code
 });

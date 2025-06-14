@@ -8,25 +8,25 @@
 </head>
 <body>
   <header>
-    <div class="header__nav">
-    <div id="mobile-nav">
-        <nav>
-            <a href="index.html">WORK</a>
-            <a href="first_shoot.html">FIRST SHOOT?</a>
-            <a href="standard_agreement.html">STANDARD AGREEMENT</a>
-            <a href="contact.html">CONTACT</a>
-        </nav>
+    <nav class="header__nav" aria-label="Main navigation">
+    <div id="mobile-nav"> <!-- This div might be for JS toggling, keep for now -->
+        <a href="first_shoot.html">FIRST SHOOT?</a>
+        <a href="standard_agreement.html">STANDARD AGREEMENT</a>
+        <a href="contact.html">CONTACT</a>
     </div>
-</div>
+</nav>
 <div class="header__title">
-    <h1>Logan Wu</h1>
+    <!-- The H1 for the site title/name is often in the main template or a specific branding partial.
+         If this header is purely for navigation, this H1 might be better placed elsewhere.
+         For now, keeping it as per original structure. -->
+    <h1><a href="index.html" class="header__title-link">Logan Wu</a></h1>
 </div>
-<div class="header__empty"></div>
+<div class="header__empty"></div> <!-- This seems to be a spacer, might be achievable with CSS flex properties on the parent -->
 
   </header>
   <main>
     <div id="album-viewer" class="grid-main">
-          <div id="first-shoot">
+          <article id="first-shoot">
         <h1>First Shoot?</h1>
         <p>Whether you're a beginner or a veteran, professional photos are the best way to celebrate your hard work and share your passion with those around you.</p>
         <p>Participating in a photo shoot is a collaborative performance. Read on to find out how to prepare yourself and maximise your session.</p>
@@ -54,7 +54,7 @@
         <p>Once you have given me your selection, I will complete the full edits and send you a high-quality download, normally within 7 days. You can request any adjustments (excluding major retouching)</p>
         <p>If you would like any changes at any point, it is never too late! I back up and retain the original files indefinitely.</p>
         <p>Thanks for reading, and have fun!</p>
-    </div>
+    </article>
 
     </div>
   </main>

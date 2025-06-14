@@ -4,7 +4,7 @@
 :root {
   --white: #fff;
   --grey: grey;
-  --paragraph-text-color: #aaa;
+  --paragraph-text-color: #bbb;
   --pale-blue: #ADD8E6;
   --black: #111111;
 }
@@ -62,6 +62,11 @@ header {
     padding: 0;
 }
 
+.header__title-link {
+    text-decoration: none;
+    color: inherit; /* Inherit color from parent h1 */
+}
+
 .header__empty {
     width: 40%;
 }
@@ -71,7 +76,12 @@ h1, h2 {
     color: var(--white);
     font-weight: 400;
     text-transform: uppercase;
-    padding-top: 1.5rem;
+    padding-top: 0rem;
+}
+
+h2 {
+  font-size: 1.2em;
+  padding-top: 1rem;
 }
 
 header nav a {
@@ -92,6 +102,7 @@ header nav a:hover {
     header {
         flex-direction: column;
         align-items: center;
+        margin-bottom: 0;
     }
 
     .header__burger {
@@ -102,21 +113,17 @@ header nav a:hover {
 
     .header__nav {
         width: 100%;
+        order: 1; /* Ensure nav appears after title if header is column-flex */
     }
 
     #mobile-nav {
-        display: none;
+        /* display: none; */ /* Changed to flex to make it visible */
+        display: flex;
         flex-direction: column;
         align-items: center;
         width: 100%;
+        padding-top: 30px; /* Add some space above the nav items */
     }
-
-    /* .grid__item-container padding is now controlled by --gallery-spacing in #album-viewer media query */
-    /*
-    .grid__item-container {
-        padding: 2px !important;
-    }
-    */
 
     #album-viewer {
         --gallery-spacing: 4px; /* Mobile: results in 2px padding on items, 4px between rows */
@@ -129,18 +136,12 @@ header nav a:hover {
     .header__title {
         width: auto;
         text-align: center;
-    }
-
-    #mobile-nav {
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        width: 100%;
+        order: 0; /* Ensure title appears before nav if header is column-flex */
     }
 
     #mobile-nav a {
         display: block;
-        margin: 10px 0;
+        margin: 5px 0; /* Reduced from 10px 0 for 50% more compact vertical spacing */
         text-align: center;
     }
 
@@ -247,12 +248,6 @@ header nav a:hover {
 .grid__row {
   display: flex;
   width: 100%;
-  /* Spacing between rows, removed for the last row */
-}
-
-.grid__row:not(:last-child) {
-  margin-bottom: 0px;
-  /*margin-bottom: var(--gallery-spacing, 10px); /* Default to 10px gap if variable not set */
 }
 
 .top-links {
