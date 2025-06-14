@@ -297,38 +297,40 @@ footer .copyright {
 
 /* Fallback for No-JS Gallery */
 /* Styles for the main container when JS is disabled */
-#image-gallery-container.image-gallery-container {
+#image-gallery-container { /* Simplified selector */
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start; /* Aligns images to the start */
-  padding: 8px 0; /* Padding for the container itself */
+  /* Container padding can be adjusted if needed, e.g., to remove side padding if items handle it all */
+  /* padding: 8px 0; */ /* Current padding, review if 4px on items is enough */
 }
 
 /* Styles for individual images when JS is disabled */
-#image-gallery-container.image-gallery-container > .gallery-image-source {
+#image-gallery-container > .gallery-image-source {
   flex-grow: 1; /* Allow images to grow to fill space */
   flex-shrink: 1; /* Allow images to shrink if needed */
-  /* Set a basis that aims for roughly 3 images per row, accounting for gap */
-  flex-basis: calc(33.333% - 8px); /* (100% / 3) - gap. Adjust if gap changes. */
-  max-width: calc(33.333% - 8px); /* Enforces wrapping to maintain ~3 per row */
+  flex-basis: 33.333%; /* Default: 3 images per row */
+  max-width: 33.333%;   /* Default: 3 images per row */
   height: auto; /* Maintain aspect ratio */
-  object-fit: cover; /* How image should fill its box, 'contain' might also be an option */
-  display: block; /* Removes extra space below inline images */
+  object-fit: cover;
+  display: block;
   box-sizing: border-box;
-  background-color: #222; /* A subtle background for the image area */
+  padding: 4px; /* Creates 8px gap between items (4px on each side) */
+  /* background-color: #222; */ /* Removed to prevent grey outline effect with padding */
 }
 
 /* Responsive adjustments for the No-JS fallback */
-@media (max-width: 900px) { /* Adjust breakpoint for 2 images per row */
-  #image-gallery-container.image-gallery-container > .gallery-image-source {
-    flex-basis: calc(50% - 8px);
-    max-width: calc(50% - 8px);
+@media (max-width: 900px) { /* 2 images per row */
+  #image-gallery-container > .gallery-image-source {
+    flex-basis: 50%;
+    max-width: 50%;
   }
 }
 
-@media (max-width: 600px) { /* Adjust breakpoint for 1 image per row */
-  #image-gallery-container.image-gallery-container > .gallery-image-source {
-    flex-basis: 100%; /* Full width, gap is handled by container or items themselves */
+@media (max-width: 600px) { /* 1 image per row */
+  #image-gallery-container > .gallery-image-source {
+    flex-basis: 100%;
     max-width: 100%;
+    /* Padding still applies, giving a 4px space around the full-width image */
   }
 }
