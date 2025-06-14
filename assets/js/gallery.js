@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 renderGallery(); // Initial render
                 // Setup debounced resize listener - add only once
                 if (!window.galleryResizeListenerAttached) {
-                    window.addEventListener('resize', debounce(renderGallery, 250));
+                    window.addEventListener('resize', debounce(renderGallery, 100));
                     window.galleryResizeListenerAttached = true; 
                 }
             }
