@@ -27,21 +27,29 @@ const PAGES = [
     {
         name: 'index.html',
         contentKey: 'gallery', // Special key for gallery content
+        title: 'Photos by Logan | Melbourne & Shanghai Pole & Aerial Photography',
+        metaDescription: 'Stunning pole dance and aerial arts photography by Logan, based in Melbourne and Shanghai. Specializing in studio photoshoots and event photography/videography.',
     },
     {
         name: 'contact.html',
         contentKey: 'contact',
         partial: PARTIAL_FILES.contact,
+        title: 'Contact Photos by Logan | Pole & Aerial Photographer',
+        metaDescription: 'Get in touch with Logan for pole dance and aerial arts photography services in Melbourne and Shanghai. Event coverage and studio shoots available.',
     },
     {
         name: 'first_shoot.html',
         contentKey: 'firstShoot',
         partial: PARTIAL_FILES.firstShoot,
+        title: 'Your First Pole/Aerial Photo Shoot Guide | Photos by Logan',
+        metaDescription: 'Preparing for your first pole dance or aerial photo shoot? Get tips and advice from Photos by Logan to make the most of your session.',
     },
     {
         name: 'standard_agreement.html',
         contentKey: 'standardAgreement',
         partial: PARTIAL_FILES.standardAgreement,
+        title: 'Photography Agreement | Photos by Logan',
+        metaDescription: 'Review the standard photography session agreement for photoshoots with Photos by Logan.',
     },
 ];
 
@@ -101,8 +109,10 @@ async function getImageFiles(directory) {
 function generateGalleryHTML(imageFiles) {
     let html = '<div id="image-gallery-container" class="image-gallery-container">';
     imageFiles.forEach(imageFile => {
+        // Improved alt text
+        const descriptiveAlt = `Pole and aerial arts photo by Logan - ${imageFile.replace(/\.[^/.]+$/, "")}`;
         html += `
-      <img src="${path.join(SRC_DIR.photos, imageFile)}" alt="${imageFile}" class="gallery-image-source grid__item-image-lazy js-lazy" onclick="openLightbox('${path.join(SRC_DIR.photos, imageFile)}')">`;
+      <img src="${path.join(SRC_DIR.photos, imageFile)}" alt="${descriptiveAlt}" class="gallery-image-source grid__item-image-lazy js-lazy" onclick="openLightbox('${path.join(SRC_DIR.photos, imageFile)}')">`;
     });
     html += `
     </div>`;
@@ -165,6 +175,8 @@ async function buildSite() {
         }
 
         const pageHtml = baseTemplateContent
+            .replace('<!-- TITLE_PLACEHOLDER -->', page.title || 'Photos by Logan')
+            .replace('<!-- META_DESCRIPTION_PLACEHOLDER -->', page.metaDescription ? `<meta name="description" content="${page.metaDescription}">` : '')
             .replace('<!-- HEADER_PLACEHOLDER -->', partials.header)
             .replace('<!-- FOOTER_PLACEHOLDER -->', partials.footer)
             .replace('<!-- CONTENT_PLACEHOLDER -->', pageSpecificContent);
@@ -184,7 +196,7 @@ async function buildSite() {
 
     // 6. Create CNAME file
     const cnamePath = path.join(BUILD_DIR, 'CNAME');
-    await writeFileContent(cnamePath, 'photosby.loganwu.co.nz');
+    await writeFileContent(cnamePath, 'photosbylogan.co.nz'); // Updated CNAME
     console.log('CNAME file created.');
 
     console.log('Build process completed successfully!');
