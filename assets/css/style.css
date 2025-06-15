@@ -52,6 +52,7 @@ header {
     width: 20%;
     text-align: center;
     display: flex;
+    flex-direction: column; /* Stack title and tagline vertically */
     align-items: center;
     justify-content: center;
 }
@@ -59,6 +60,15 @@ header {
 .header__title h1 {
     margin: 0;
     padding: 0;
+}
+
+.header__tagline {
+    font-size: 0.8em; /* Smaller than the main title */
+    color: var(--grey); /* Grey text */
+    margin-top: 5px; /* Space below the main title */
+    display: block; /* Ensure it takes its own line if needed */
+    text-transform: uppercase; /* Match h1 style */
+    font-weight: 400; /* Match h1 style */
 }
 
 .header__title-link {
