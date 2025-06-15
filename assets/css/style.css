@@ -204,6 +204,17 @@ header nav a:hover {
     100% { opacity: 1; }
 }
 
+@keyframes wiggle {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); } /* More pronounced */
+  75% { transform: translateX(10px); }  /* More pronounced */
+}
+
+.lightbox-image-wiggle {
+  animation: wiggle 0.5s ease-in-out;
+  animation-delay: 0.5s; /* Added delay */
+}
+
 #lightbox img {
     max-width: 100%;
     max-height: 100%;
@@ -302,7 +313,7 @@ footer .copyright {
   flex-wrap: wrap;
   justify-content: flex-start; /* Aligns images to the start */
   /* Container padding can be adjusted if needed, e.g., to remove side padding if items handle it all */
-  /* padding: 8px 0; */ /* Current padding, review if 4px on items is enough */
+  padding: 1rem 0; /* Current padding, review if 4px on items is enough */
 }
 
 /* Styles for individual images when JS is disabled */
@@ -333,4 +344,12 @@ footer .copyright {
     max-width: 100%;
     /* Padding still applies, giving a 4px space around the full-width image */
   }
+}
+
+/* Hide lightbox navigation buttons on narrow screens in portrait orientation */
+@media (max-width: 600px) and (orientation: portrait) {
+    #lightbox .left-button,
+    #lightbox .right-button {
+        display: none;
+    }
 }

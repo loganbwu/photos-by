@@ -2,6 +2,7 @@ let images = [];
 let currentIndex = 0;
 const lightbox = document.getElementById('lightbox');
 const lightboxImg = lightbox.querySelector('img');
+let hasWiggleAnimatedThisLoad = false; // Flag to track animation per page load
 
 // Function to show a specific image in the lightbox
 function showImage(index) {
@@ -15,6 +16,25 @@ function openLightbox(imgSrc, index) {
   lightboxImg.src = imgSrc; // Set the source of the image in the lightbox
   lightbox.style.display = 'flex'; // Display the lightbox
   currentIndex = index; // Set the current index
+
+  // Wiggle animation logic
+  const prevButton = document.getElementById('prev-button');
+  const nextButton = document.getElementById('next-button');
+
+  // Check if nav buttons are hidden (common on mobile)
+  const navButtonsHidden = (prevButton && getComputedStyle(prevButton).display === 'none') || 
+                           (nextButton && getComputedStyle(nextButton).display === 'none');
+
+  if (!hasWiggleAnimatedThisLoad && navButtonsHidden) {
+    lightboxImg.classList.add('lightbox-image-wiggle');
+    hasWiggleAnimatedThisLoad = true; // Set flag for this page load
+
+    function handleAnimationEnd() {
+      lightboxImg.classList.remove('lightbox-image-wiggle');
+      lightboxImg.removeEventListener('animationend', handleAnimationEnd);
+    }
+    lightboxImg.addEventListener('animationend', handleAnimationEnd);
+  }
 }
 
 // Function to close the lightbox
