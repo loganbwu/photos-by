@@ -103,21 +103,11 @@ header nav a:hover {
     color: var(--white);
 }
 
-.header__burger {
-    display: none;
-}
-
 @media (max-width: 768px) {
     header {
         flex-direction: column;
         align-items: center;
         margin-bottom: 0;
-    }
-
-    .header__burger {
-        display: block;
-        cursor: pointer;
-        order: -1;
     }
 
     .header__nav {
@@ -152,14 +142,6 @@ header nav a:hover {
         display: block;
         margin: 5px 0; /* Reduced from 10px 0 for 50% more compact vertical spacing */
         text-align: center;
-    }
-
-    .header__burger span {
-        display: block;
-        width: 25px;
-        height: 3px;
-        background-color: var(--white);
-        margin-bottom: 5px;
     }
 }
 
