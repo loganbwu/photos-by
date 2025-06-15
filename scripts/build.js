@@ -196,7 +196,7 @@ async function buildSite() {
 
     // 6. Create CNAME file
     const cnamePath = path.join(BUILD_DIR, 'CNAME');
-    await writeFileContent(cnamePath, 'photosbylogan.co.nz'); // Updated CNAME
+    await writeFileContent(cnamePath, 'photosby.loganwu.co.nz'); // Updated CNAME
     console.log('CNAME file created.');
 
     console.log('Build process completed successfully!');
