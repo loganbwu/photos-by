@@ -383,3 +383,47 @@ footer .copyright {
   z-index: 1001;
   pointer-events: none;
 }
+
+/* Button Styles */
+button,
+input[type="submit"],
+input[type="button"] {
+    font-family: 'Oswald', sans-serif;
+    text-transform: uppercase;
+    font-size: 1em;
+    color: var(--black);
+    background-color: var(--pale-blue);
+    border: 1px solid var(--pale-blue);
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+button:hover,
+input[type="submit"]:hover,
+input[type="button"]:hover {
+    background-color: var(--white);
+    border-color: var(--white);
+    color: var(--black);
+}
+
+/* Form Styles */
+#album-name-form {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+#album-name-input {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid var(--grey);
+    background-color: var(--black);
+    color: var(--white);
+    font-family: Helvetica, sans-serif;
+    font-size: 1em;
+}
+
+#album-name-form button {
+    flex-shrink: 0; /* Prevent button from shrinking */
+}
