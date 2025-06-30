@@ -21,6 +21,7 @@ const PARTIAL_FILES = {
     contact: 'contact_partial.html',
     firstShoot: 'first_shoot_partial.html',
     standardAgreement: 'standard_agreement_partial.html',
+    privateGallery: 'albums_partial.html',
 };
 
 const PAGES = [
@@ -50,6 +51,14 @@ const PAGES = [
         partial: PARTIAL_FILES.standardAgreement,
         title: 'Photography Agreement | Photos by Logan',
         metaDescription: 'Review the standard photography session agreement for photoshoots with Photos by Logan.',
+    },
+    {
+        name: 'albums.html',
+        contentKey: 'privateGallery',
+        partial: PARTIAL_FILES.privateGallery,
+        title: 'Albums | Photos by Logan',
+        metaDescription: 'Access a private photo album.',
+        scripts: ['assets/js/private-gallery.js'] // Page-specific script
     },
 ];
 
@@ -179,7 +188,8 @@ async function buildSite() {
             .replace('<!-- META_DESCRIPTION_PLACEHOLDER -->', page.metaDescription ? `<meta name="description" content="${page.metaDescription}">` : '')
             .replace('<!-- HEADER_PLACEHOLDER -->', partials.header)
             .replace('<!-- FOOTER_PLACEHOLDER -->', partials.footer)
-            .replace('<!-- CONTENT_PLACEHOLDER -->', pageSpecificContent);
+            .replace('<!-- CONTENT_PLACEHOLDER -->', pageSpecificContent)
+            .replace('<!-- PAGE_SPECIFIC_SCRIPTS_PLACEHOLDER -->', page.scripts ? page.scripts.map(scriptPath => `<script src="${scriptPath}" defer></script>`).join('\n') : '');
 
         const outputPath = path.join(BUILD_DIR, page.name);
         await writeFileContent(outputPath, pageHtml);

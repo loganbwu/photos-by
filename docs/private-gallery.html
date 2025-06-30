@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Access a private photo gallery.">
+  <title>Private Gallery | Photos by Logan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <header>
+    <nav class="header__nav" aria-label="Main navigation">
+    <div id="mobile-nav"> <!-- This div might be for JS toggling, keep for now -->
+        <a href="first_shoot.html">FIRST SHOOT?</a>
+        <a href="standard_agreement.html">STANDARD AGREEMENT</a>
+        <a href="albums.html">ALBUMS</a>
+        <a href="contact.html">CONTACT</a>
+    </div>
+</nav>
+<div class="header__title">
+    <!-- The H1 for the site title/name is often in the main template or a specific branding partial.
+         If this header is purely for navigation, this H1 might be better placed elsewhere.
+         For now, keeping it as per original structure. -->
+    <h1><a href="index.html" class="header__title-link">Photos by Logan</a></h1>
+    <span class="header__tagline">Melbourne | Shanghai</span>
+</div>
+<div class="header__empty"></div> <!-- This seems to be a spacer, might be achievable with CSS flex properties on the parent -->
+
+  </header>
+  <main>
+    <div id="album-viewer" class="grid-main">
+      <section id="album-access">
+  <h1>Albums</h1>
+  <p>Please enter the album name.</p>
+  <form id="album-name-form">
+    <input type="text" id="album-name-input" placeholder="Album name" aria-label="Album name for private gallery" required>
+    <button type="submit" id="submit-album-name-button">View Gallery</button>
+  </form>
+  <p id="error-message" style="color: firebrick; display: none;"></p>
+</section>
+<div id="image-gallery-container" class="image-gallery-container" style="display: none;">
+  <!-- Images will be loaded here by JavaScript -->
+</div>
+
+    </div>
+  </main>
+  <footer>
+  <div class="copyright"><p>&copy; 2025 Photos by Logan</p></div>
+</footer>
+
+  <div id="lightbox">
+  <div id="lightbox-filename"></div>
+  <img src="" alt="Fullsize image">
+  <span class="close-button" onclick="closeLightbox()">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+  </span>
+  <span class="nav-button left-button" id="prev-button">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"></polyline>
+    </svg>
+  </span>
+  <span class="nav-button right-button" id="next-button">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </span>
+</div>
+<script src="assets/js/script.js"></script>
+    <script src="assets/js/gallery.js"></script>
+    <script src="assets/js/private-gallery.js" defer></script>
+</body>
+</html>
