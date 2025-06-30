@@ -12,14 +12,27 @@ LOCAL_STAGING_DIR = "backend/gcs_local_staging"
 # ---------------------
 
 def get_exif_date(image_bytes):
-    """Extracts the creation date from image EXIF data."""
+    """
+    Extracts the creation date from image EXIF data by checking multiple tags.
+    It checks for DateTimeOriginal, DateTimeDigitized, and DateTime tags in that order.
+    """
     try:
         img = Image.open(BytesIO(image_bytes))
         exif_data = img._getexif()
-        if exif_data and 36867 in exif_data:
-            # EXIF tag 36867 is DateTimeOriginal
-            date_str = exif_data[36867]
-            return datetime.datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
+        if exif_data:
+            # EXIF tags for date/time, in order of preference.
+            # According to the user, 36867 is the corrected timestamp from Lightroom.
+            # 36867: DateTimeOriginal
+            # 36868: DateTimeDigitized
+            # 306: DateTime
+            for tag in [36867, 36868, 306]:
+                if tag in exif_data:
+                    date_str = exif_data[tag]
+                    # The date string can sometimes be empty or malformed.
+                    if date_str and isinstance(date_str, str):
+                        date_str = date_str.strip().replace('\x00', '')
+                        if date_str:
+                            return datetime.datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
     except Exception as e:
         print(f"Could not read EXIF data: {e}")
     return None
