@@ -287,7 +287,7 @@ header nav a:hover {
     margin-bottom: 10px;
 }
 
-#contact {
+#contact, #album-access {
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
@@ -344,4 +344,42 @@ footer .copyright {
     #lightbox .right-button {
         display: none;
     }
+}
+
+/* Styles for private gallery image overlay */
+.image-container {
+    position: relative;
+    display: inline-block; /* Or 'block', depending on layout */
+}
+
+.filename-overlay {
+  font-family: 'Oswald', sans-serif;
+  padding: 0.25rem;
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.5); /* Transparent black */
+  color: white;
+  font-size: 12px;
+  user-select: all;
+  /* Ensure the overlay doesn't exceed the image boundaries */
+  max-width: 100%;
+  box-sizing: border-box;
+  /* Text styling */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#lightbox-filename {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  color: white;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 14px;
+  z-index: 1001;
+  pointer-events: none;
 }

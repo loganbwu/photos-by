@@ -8,12 +8,22 @@ let hasWiggleAnimatedThisLoad = false; // Flag to track animation per page load
 function showImage(index) {
   if (images.length === 0) return;
   currentIndex = (index + images.length) % images.length; // Handle wrapping
-  lightboxImg.src = images[currentIndex];
+  const image = images[currentIndex];
+  lightboxImg.src = image.src;
+  const lightboxFilename = document.getElementById('lightbox-filename');
+  if (lightboxFilename && document.getElementById('private-gallery-access')) {
+    lightboxFilename.textContent = image.filename;
+  }
 }
 
 // Function to open the lightbox with the selected image
 function openLightbox(imgSrc, index) {
-  lightboxImg.src = imgSrc; // Set the source of the image in the lightbox
+  const image = images[index];
+  lightboxImg.src = image.src; // Set the source of the image in the lightbox
+  const lightboxFilename = document.getElementById('lightbox-filename');
+  if (lightboxFilename && document.getElementById('private-gallery-access')) {
+    lightboxFilename.textContent = image.filename;
+  }
   lightbox.style.display = 'flex'; // Display the lightbox
   currentIndex = index; // Set the current index
 
@@ -69,7 +79,8 @@ window.initializeLightboxStateAndListeners = function() {
   images = []; // Clear existing images before repopulating
   const galleryImages = document.querySelectorAll('.grid__item-image');
   galleryImages.forEach((img, index) => {
-    images.push(img.src); // Populate the images array
+    const filename = img.src.split('?')[0].split('/').pop();
+    images.push({ src: img.src, filename: filename }); // Populate the images array
     // Remove any old listener before adding a new one to prevent duplicates if this function is called multiple times
     img.removeEventListener('click', openLightboxOnClick); // Use a named function for removal
     img.addEventListener('click', function() { openLightboxOnClick(img.src, index); });

@@ -1,0 +1,36 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "Logan Wu", email = "loganbwu@gmail.com" }
+]
+dependencies = [
+    "google-auth>=2.40.3",
+    "google-cloud-storage>=3.1.1",
+    "functions-framework>=3.8.3",
+]
+readme = "README.md"
+requires-python = ">= 3.12"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye.scripts]
+sync-gcs = { cmd = "python ../scripts/sync_gcs.py" }
+deploy = { cmd = "./deploy.sh" }
+pip = { cmd = "pip" }
+
+[tool.rye]
+managed = true
+dev-dependencies = []
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+include = [
+  "src/backend",
+  "main.py"
+]

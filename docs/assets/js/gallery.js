@@ -1,6 +1,7 @@
 // Global variables to store image data and container for access by resize handler
 let allImageObjects = [];
 let galleryNode = null;
+let isPrivateGalleryView = false; // Flag to control private gallery features
 const SMALL_SCREEN_BREAKPOINT = 768; // px, screens narrower than this will show 2 images per row
 
 // Debounce function to limit how often renderGallery is called on resize
@@ -19,7 +20,8 @@ function debounce(func, wait, immediate) {
     };
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+function processAndRenderGallery(isPrivate = false) {
+    isPrivateGalleryView = isPrivate; // Set the flag for this gallery view
     galleryNode = document.getElementById('image-gallery-container');
     if (!galleryNode) {
         console.warn('Gallery container #image-gallery-container not found. Aspect ratio script will not run.');
@@ -34,49 +36,59 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     let imagesLoadedCount = 0;
-    // Clear previous image objects if any (e.g. if script was re-run without page reload)
-    allImageObjects = []; 
+    allImageObjects = []; // Clear previous image objects
 
     imagesToProcess.forEach(imgElement => {
         const tempImg = new Image();
         tempImg.onload = () => {
             imagesLoadedCount++;
             allImageObjects.push({
-                element: imgElement, // Keep original element to preserve attributes like onclick, alt, src
+                element: imgElement,
                 aspectRatio: tempImg.naturalWidth / tempImg.naturalHeight,
                 naturalWidth: tempImg.naturalWidth,
-                naturalHeight: tempImg.naturalHeight
+                naturalHeight: tempImg.naturalHeight,
+                filename: imgElement.src.split('?')[0].split('/').pop()
             });
 
             if (imagesLoadedCount === imagesToProcess.length) {
-                renderGallery(); // Initial render
-                // Setup debounced resize listener - add only once
-                if (!window.galleryResizeListenerAttached) {
-                    window.addEventListener('resize', debounce(renderGallery, 100));
-                    window.galleryResizeListenerAttached = true; 
-                }
+                allImageObjects.sort((a, b) => a.element.src.localeCompare(b.element.src));
+                renderGallery();
             }
         };
         tempImg.onerror = () => {
             imagesLoadedCount++;
             console.warn(`Could not load image for dimension calculation: ${imgElement.src}`);
-            // Add with default aspect ratio if load fails, to maintain structure
             allImageObjects.push({
                 element: imgElement,
-                aspectRatio: 1, 
-                naturalWidth: 100, // Default dimensions for placeholder
-                naturalHeight: 100
+                aspectRatio: 1,
+                naturalWidth: 100,
+                naturalHeight: 100,
+                filename: imgElement.src.split('?')[0].split('/').pop()
             });
             if (imagesLoadedCount === imagesToProcess.length) {
+                allImageObjects.sort((a, b) => a.element.src.localeCompare(b.element.src));
                 renderGallery();
-                if (!window.galleryResizeListenerAttached) {
-                    window.addEventListener('resize', debounce(renderGallery, 250));
-                    window.galleryResizeListenerAttached = true;
-                }
             }
         };
-        tempImg.src = imgElement.src; // This triggers the loading
+        tempImg.src = imgElement.src;
     });
+}
+
+// Make the function globally available for albums.js
+window.processAndRenderGallery = processAndRenderGallery;
+window.renderGallery = renderGallery;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initial call for public galleries, but not for the private gallery page
+    if (!document.getElementById('album-access')) {
+        processAndRenderGallery();
+    }
+
+    // Setup debounced resize listener - add only once
+    if (!window.galleryResizeListenerAttached) {
+        window.addEventListener('resize', debounce(renderGallery, 100));
+        window.galleryResizeListenerAttached = true;
+    }
 });
 
 function renderGallery() {
@@ -105,7 +117,7 @@ function renderGallery() {
 
         rowImages.forEach(imgData => {
             const itemContainer = document.createElement('div');
-            itemContainer.className = 'grid__item-container js-grid-item-container'; 
+            itemContainer.className = 'grid__item-container js-grid-item-container image-container'; 
             
             const currentImageAspectRatio = typeof imgData.aspectRatio === 'number' && !isNaN(imgData.aspectRatio) ? imgData.aspectRatio : 1;
             // Ensure rowAspectRatioSum is not zero to prevent division by zero
@@ -135,6 +147,15 @@ function renderGallery() {
             }
 
             itemContainer.appendChild(newImgElement);
+
+            // Conditionally add the overlay for private galleries
+            if (isPrivateGalleryView) {
+                const overlay = document.createElement('div');
+                overlay.className = 'filename-overlay';
+                overlay.textContent = imgData.filename;
+                itemContainer.appendChild(overlay);
+            }
+            
             rowElement.appendChild(itemContainer);
         });
         galleryNode.appendChild(rowElement);

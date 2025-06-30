@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Get in touch with Logan for pole dance and aerial arts photography services in Melbourne and Shanghai. Event coverage and studio shoots available.">
-  <title>Contact Photos by Logan | Pole & Aerial Photographer</title>
+  <meta name="description" content="Access a private photo album.">
+  <title>Albums | Photos by Logan</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
@@ -32,10 +32,18 @@
   </header>
   <main>
     <div id="album-viewer" class="grid-main">
-          <section id="contact">
-        <h1>Contact</h1>
-        <p>Contact me on Instagram: <a href="https://instagram.com/local_oat_growers_association">@local_oat_growers_association</a></p>
-    </section>
+      <section id="album-access">
+  <h1>Albums</h1>
+  <p>Please enter the album name.</p>
+  <form id="album-name-form">
+    <input type="text" id="album-name-input" placeholder="Album name" aria-label="Album name for private gallery" required>
+    <button type="submit" id="submit-album-name-button">View Gallery</button>
+  </form>
+  <p id="error-message" style="color: firebrick; display: none;"></p>
+</section>
+<div id="image-gallery-container" class="image-gallery-container" style="display: none;">
+  <!-- Images will be loaded here by JavaScript -->
+</div>
 
     </div>
   </main>
@@ -61,6 +69,6 @@
 </div>
 <script src="assets/js/script.js"></script>
     <script src="assets/js/gallery.js"></script>
-    
+    <script src="assets/js/private-gallery.js" defer></script>
 </body>
 </html>
