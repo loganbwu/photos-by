@@ -34,10 +34,14 @@
     <div id="album-viewer" class="grid-main">
       <section id="album-access">
   <h1>Albums</h1>
-  <p>Please enter the album name.</p>
+  <p class="gallery-instructions">
+    Click for fullscreen<br>
+    Left/right keys or swipe to navigate<br>
+    Copy filenames to order
+  </p>
   <form id="album-name-form">
     <input type="text" id="album-name-input" placeholder="Album name" aria-label="Album name for private gallery" required>
-    <button type="submit" id="submit-album-name-button">View Gallery</button>
+    <button type="submit" id="submit-album-name-button">View album</button>
   </form>
   <p id="error-message" style="color: firebrick; display: none;"></p>
 </section>
