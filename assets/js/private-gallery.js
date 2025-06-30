@@ -62,28 +62,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function populateGallery(baseUrl, images, manifest = null) {
         if (!galleryContainer) return;
-        galleryContainer.innerHTML = ''; // Clear any existing content, like "Loading..." text
+        galleryContainer.innerHTML = ''; // Clear any existing content
 
         if (!images || images.length === 0) {
             displayError("No images to display.");
             return;
         }
 
-        // Create image elements but don't process them here.
-        // The gallery.js script will find them and handle the progressive loading.
         images.forEach(imageName => {
             const imgElement = document.createElement('img');
-            // Add a specific class for the gallery script to find these images.
-            imgElement.className = 'gallery-image-source'; 
+            imgElement.className = 'gallery-image-source grid__item-image-lazy js-lazy';
             imgElement.src = `${baseUrl}${imageName}`;
             imgElement.alt = imageName; // Use filename as alt text
-            // Hide them initially to prevent a flash of unstyled content
-            imgElement.style.display = 'none'; 
             galleryContainer.appendChild(imgElement);
         });
 
-        // Call the updated global function from gallery.js.
-        // It will now handle the progressive loading and rendering.
+        // Now that the images are in the DOM, call the global function from gallery.js
+        // to process them into the grid layout, passing the manifest.
         if (typeof window.processAndRenderGallery === 'function') {
             window.processAndRenderGallery(true, manifest); // Pass true for private galleries and the manifest
         } else {
