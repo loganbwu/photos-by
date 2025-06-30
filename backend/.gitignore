@@ -8,3 +8,6 @@ wheels/
 
 # venv
 .venv
+
+# Service account keys
+gcp-sa-key.json

@@ -2,15 +2,17 @@ node_modules/
 .DS_Store
 *.log
 
+# Python virtual environments
+venv/
+.venv/
+
 # Backend specific
 backend/__pycache__/
-backend/.venv/
 backend/*.db
 backend/*.sqlite3
 backend/instance/
 backend/migrations/
 backend/.env
-backend/venv/
 backend/env/
 backend/ENV/
 backend/virtualenv/

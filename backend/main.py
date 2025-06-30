@@ -2,6 +2,7 @@ import functions_framework
 from google.cloud import storage
 import datetime
 import os
+import json
 from flask import jsonify
 import google.auth
 from google.auth.transport import requests
@@ -25,34 +26,48 @@ def verify_album_exists(bucket_name: str, prefix: str):
         print(f"Error verifying album existence for prefix '{prefix}': {e}")
         return False
 
-def list_gcs_images(bucket_name: str, prefix: str):
+def get_gcs_data(bucket_name: str, prefix: str):
     """
-    Lists image filenames in a GCS bucket under a given prefix.
+    Lists all image filenames in a GCS bucket under a given prefix and
+    retrieves the manifest.json if it exists.
     """
     if not prefix.endswith('/'):
         prefix += '/'
 
-    image_filenames = []
     try:
         storage_client = storage.Client()
         bucket = storage_client.bucket(bucket_name)
+        
+        # Get all image filenames
+        image_filenames = []
         blobs = bucket.list_blobs(prefix=prefix)
-
         for blob in blobs:
+            # Skip the folder placeholder object
             if blob.name == prefix and blob.size == 0:
                 continue
             
+            # Add any valid image files to the list
             if blob.name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
                 image_filenames.append(os.path.basename(blob.name))
         
         if not image_filenames:
             print(f"No image files found in GCS bucket '{bucket_name}' with prefix '{prefix}'.")
+            return None, None, 404
+
+        # Try to load the manifest file
+        manifest_data = None
+        manifest_blob = bucket.blob(f"{prefix}manifest.json")
+        if manifest_blob.exists():
+            print(f"Found manifest.json for prefix '{prefix}'.")
+            manifest_data = json.loads(manifest_blob.download_as_string())
+        else:
+            print(f"manifest.json not found for prefix '{prefix}'.")
+
+        return image_filenames, manifest_data, 200
 
     except Exception as e:
         print(f"An unexpected error occurred when accessing GCS for prefix '{prefix}': {e}")
-        return None, 500
-    
-    return image_filenames, 200 if image_filenames else 404
+        return None, None, 500
 
 @functions_framework.http
 def private_gallery_backend(request):
@@ -101,8 +116,8 @@ def private_gallery_backend(request):
     if not verify_album_exists(bucket_name=GCS_BUCKET_NAME, prefix=album_name):
         return jsonify({"detail": "Gallery not found or album name incorrect."}), 404, headers
 
-    # Step 2: If it exists, now get the list of images.
-    image_filenames, status_code = list_gcs_images(
+    # Step 2: If it exists, get the list of images and the manifest.
+    image_filenames, manifest, status_code = get_gcs_data(
         bucket_name=GCS_BUCKET_NAME,
         prefix=album_name
     )
@@ -110,7 +125,7 @@ def private_gallery_backend(request):
     if status_code == 500:
         return jsonify({"detail": "Error retrieving gallery images."}), 500, headers
     
-    if status_code == 404: # Should be rare due to the check above, but handle it.
+    if status_code == 404:
         return jsonify({"detail": "Gallery not found or is empty."}), 404, headers
 
     # Construct the public base URL for the images
@@ -118,5 +133,6 @@ def private_gallery_backend(request):
 
     return jsonify({
         "base_url": base_image_url,
-        "images": image_filenames
+        "images": image_filenames,
+        "manifest": manifest  # Pass the manifest to the frontend
     }), 200, headers

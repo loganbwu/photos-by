@@ -1,87 +1,107 @@
 import os
-import subprocess
 import sys
+import json
+from google.cloud import storage
+from PIL import Image
+from io import BytesIO
+import datetime
 
 # --- Configuration ---
-# !!! IMPORTANT: Replace with your actual GCS bucket name !!!
 GCS_BUCKET_NAME = "photos-by-logan-content"
-# Local directory containing client folders (named by password)
 LOCAL_STAGING_DIR = "backend/gcs_local_staging"
 # ---------------------
 
-def check_gsutil_installed():
-    """Checks if gsutil is installed and in PATH."""
+def get_exif_date(image_bytes):
+    """Extracts the creation date from image EXIF data."""
     try:
-        subprocess.run(["gsutil", "--version"], capture_output=True, check=True, text=True)
-        return True
-    except FileNotFoundError:
-        print("ERROR: gsutil command not found. Please ensure the Google Cloud SDK is installed and configured correctly.")
-        print("Installation guide: https://cloud.google.com/sdk/docs/install")
-        return False
-    except subprocess.CalledProcessError as e:
-        print(f"ERROR: gsutil found but returned an error: {e.stderr}")
-        return False
+        img = Image.open(BytesIO(image_bytes))
+        exif_data = img._getexif()
+        if exif_data and 36867 in exif_data:
+            # EXIF tag 36867 is DateTimeOriginal
+            date_str = exif_data[36867]
+            return datetime.datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
+    except Exception as e:
+        print(f"Could not read EXIF data: {e}")
+    return None
 
 def sync_client_folder_to_gcs(client_folder_name):
     """
-    Synchronizes a single client's local folder to GCS using gsutil rsync.
-    The client_folder_name is also the GCS prefix (folder).
+    Synchronizes a single client's local folder to GCS and generates a manifest
+    sorted by EXIF date, falling back to local file modification time.
     """
     local_path = os.path.join(LOCAL_STAGING_DIR, client_folder_name)
-    gcs_path = f"gs://{GCS_BUCKET_NAME}/{client_folder_name}/"
+    gcs_prefix = f"{client_folder_name}/"
 
     if not os.path.isdir(local_path):
         print(f"Skipping '{client_folder_name}': Local path '{local_path}' is not a directory.")
         return False
 
-    print(f"\nSynchronizing local folder '{local_path}' to GCS path '{gcs_path}'...")
-
-    # gsutil rsync command:
-    # -d: delete extra files at destination
-    # -r: recursive
-    # -c: checksum check (slower but more reliable for changes) - optional, consider for your needs
-    # -m: run in parallel (for many files) - optional
-    # Add -C to continue on error for individual files if preferred
-    command = [
-        "gsutil",
-        "-m",
-        "rsync",
-        "-d",
-        "-r",
-        "-a", "public-read",
-        local_path,
-        gcs_path,
-    ]
+    print(f"\nSynchronizing local folder '{local_path}' to GCS prefix '{gcs_prefix}'...")
 
     try:
-        # It's good practice to ensure the user is aware of potential deletions.
-        print(f"This will synchronize '{local_path}' with '{gcs_path}'.")
-        print("Files present locally but not in GCS will be uploaded.")
-        print("Files present in GCS under this path but not locally WILL BE DELETED from GCS.")
-        
-        # Optional: Add a confirmation prompt
-        # confirm = input("Proceed with sync? (yes/no): ").lower()
-        # if confirm != 'yes':
-        #     print("Sync aborted by user.")
-        #     return False
-
-        process = subprocess.run(command, capture_output=True, text=True, check=False) # check=False to handle errors manually
-
-        if process.returncode == 0:
-            print(f"Successfully synchronized '{client_folder_name}'.")
-            if process.stdout:
-                print("gsutil output:\n", process.stdout)
-            return True
-        else:
-            print(f"ERROR: gsutil rsync failed for '{client_folder_name}' with exit code {process.returncode}.")
-            if process.stdout:
-                print("gsutil stdout:\n", process.stdout)
-            if process.stderr:
-                print("gsutil stderr:\n", process.stderr)
+        # Explicitly use the service account key for authentication
+        sa_key_path = os.path.join(os.path.dirname(__file__), '..', 'backend', 'gcp-sa-key.json')
+        if not os.path.exists(sa_key_path):
+            print(f"ERROR: Service account key not found at '{sa_key_path}'")
+            print("Please follow the setup instructions to create the key file.")
             return False
-    except FileNotFoundError:
-        print("ERROR: gsutil command not found during rsync. This check should have been caught earlier.")
-        return False
+            
+        storage_client = storage.Client.from_service_account_json(sa_key_path)
+        bucket = storage_client.bucket(GCS_BUCKET_NAME)
+
+        # 1. Collect image information from local files first.
+        image_info = []
+        local_files = [
+            f for f in os.listdir(local_path) 
+            if os.path.isfile(os.path.join(local_path, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))
+        ]
+
+        if not local_files:
+            print(f"No images found in '{local_path}'. Skipping manifest generation.")
+            return True
+
+        print(f"Found {len(local_files)} images. Reading metadata...")
+        for filename in local_files:
+            local_item_path = os.path.join(local_path, filename)
+            with open(local_item_path, 'rb') as f:
+                image_bytes = f.read()
+            
+            exif_date = get_exif_date(image_bytes)
+            # Fallback to local file modification time if EXIF fails
+            mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(local_item_path))
+            
+            image_info.append({
+                "name": filename,
+                "local_path": local_item_path,
+                "timestamp": exif_date or mod_time
+            })
+
+        # 2. Sort images by the collected timestamp.
+        image_info.sort(key=lambda x: x["timestamp"])
+        
+        # 3. Upload sorted files to GCS.
+        print(f"Uploading {len(image_info)} images in sorted order...")
+        for img_data in image_info:
+            blob = bucket.blob(f"{gcs_prefix}{img_data['name']}")
+            blob.upload_from_filename(img_data['local_path'])
+            blob.make_public()
+            print(f"Uploaded '{img_data['name']}'.")
+
+        # 4. Generate and upload the manifest from the sorted list.
+        print(f"Generating manifest for '{client_folder_name}'...")
+        sorted_filenames = [img["name"] for img in image_info]
+        
+        manifest_blob = bucket.blob(f"{gcs_prefix}manifest.json")
+        manifest_blob.upload_from_string(
+            json.dumps(sorted_filenames, indent=2),
+            content_type='application/json'
+        )
+        manifest_blob.make_public()
+        print(f"Successfully generated and uploaded manifest for '{client_folder_name}'.")
+        
+        print(f"Successfully synchronized '{client_folder_name}'.")
+        return True
+
     except Exception as e:
         print(f"An unexpected error occurred during sync for '{client_folder_name}': {e}")
         return False
@@ -97,12 +117,8 @@ def main():
         print("ERROR: Please update GCS_BUCKET_NAME in this script with your actual GCS bucket name.")
         sys.exit(1)
 
-    if not check_gsutil_installed():
-        sys.exit(1)
-
     if not os.path.isdir(LOCAL_STAGING_DIR):
         print(f"ERROR: Local staging directory '{LOCAL_STAGING_DIR}' not found.")
-        print(f"Please create it and add client subfolders (e.g., '{LOCAL_STAGING_DIR}/client_password_1/').")
         sys.exit(1)
 
     client_folders = [

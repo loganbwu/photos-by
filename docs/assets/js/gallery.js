@@ -20,7 +20,7 @@ function debounce(func, wait, immediate) {
     };
 }
 
-function processAndRenderGallery(isPrivate = false) {
+function processAndRenderGallery(isPrivate = false, manifest = null) {
     isPrivateGalleryView = isPrivate; // Set the flag for this gallery view
     galleryNode = document.getElementById('image-gallery-container');
     if (!galleryNode) {
@@ -51,8 +51,7 @@ function processAndRenderGallery(isPrivate = false) {
             });
 
             if (imagesLoadedCount === imagesToProcess.length) {
-                allImageObjects.sort((a, b) => a.element.src.localeCompare(b.element.src));
-                renderGallery();
+                sortAndRender(manifest);
             }
         };
         tempImg.onerror = () => {
@@ -66,12 +65,34 @@ function processAndRenderGallery(isPrivate = false) {
                 filename: imgElement.src.split('?')[0].split('/').pop()
             });
             if (imagesLoadedCount === imagesToProcess.length) {
-                allImageObjects.sort((a, b) => a.element.src.localeCompare(b.element.src));
-                renderGallery();
+                sortAndRender(manifest);
             }
         };
         tempImg.src = imgElement.src;
     });
+}
+
+function sortAndRender(manifest) {
+    // If a manifest is provided, use it to sort. Otherwise, sort alphabetically.
+    if (manifest && Array.isArray(manifest) && manifest.length > 0) {
+        console.log("Sorting images based on manifest.");
+        const manifestOrder = manifest.reduce((acc, name, index) => {
+            acc[name] = index;
+            return acc;
+        }, {});
+        allImageObjects.sort((a, b) => {
+            const aIndex = manifestOrder[a.filename];
+            const bIndex = manifestOrder[b.filename];
+            // If a file isn't in the manifest, push it to the end.
+            if (aIndex === undefined) return 1;
+            if (bIndex === undefined) return -1;
+            return aIndex - bIndex;
+        });
+    } else {
+        console.log("No manifest provided, sorting images alphabetically.");
+        allImageObjects.sort((a, b) => a.filename.localeCompare(b.filename));
+    }
+    renderGallery();
 }
 
 // Make the function globally available for albums.js

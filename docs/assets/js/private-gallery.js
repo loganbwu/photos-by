@@ -40,9 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 const data = await response.json();
                 if (data.base_url && data.images && data.images.length > 0) {
-                    albumNameForm.style.display = 'none';
+                    albumAccessSection.style.display = 'none';
                     galleryContainer.style.display = ''; // Show gallery container
-                    populateGallery(data.base_url, data.images);
+                    // Pass the manifest to the gallery population function
+                    populateGallery(data.base_url, data.images, data.manifest);
                 } else {
                     displayError('No images found for the provided album name, or the gallery is empty.');
                 }
@@ -59,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function populateGallery(baseUrl, images) {
+    function populateGallery(baseUrl, images, manifest = null) {
         if (!galleryContainer) return;
         galleryContainer.innerHTML = ''; // Clear any existing content
 
@@ -67,9 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
             displayError("No images to display.");
             return;
         }
-
-        // Sort images alphabetically by filename
-        images.sort((a, b) => a.localeCompare(b));
 
         images.forEach(imageName => {
             const imgElement = document.createElement('img');
@@ -80,9 +78,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Now that the images are in the DOM, call the global function from gallery.js
-        // to process them into the grid layout.
+        // to process them into the grid layout, passing the manifest.
         if (typeof window.processAndRenderGallery === 'function') {
-            window.processAndRenderGallery(true); // Pass true for private galleries
+            window.processAndRenderGallery(true, manifest); // Pass true for private galleries and the manifest
         } else {
             console.error('processAndRenderGallery function not found. The main gallery script may have failed to load.');
             displayError('Error displaying gallery. Please refresh and try again.');
