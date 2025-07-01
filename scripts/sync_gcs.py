@@ -5,10 +5,13 @@ from google.cloud import storage
 from PIL import Image
 from io import BytesIO
 import datetime
+from tqdm import tqdm
 
 # --- Configuration ---
 GCS_BUCKET_NAME = "photos-by-logan-content"
-LOCAL_STAGING_DIR = "backend/gcs_local_staging"
+# Construct the absolute path to the staging directory relative to the script's location
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+LOCAL_STAGING_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "backend", "gcs_local_staging"))
 # ---------------------
 
 def get_exif_date(image_bytes):
@@ -21,150 +24,116 @@ def get_exif_date(image_bytes):
         exif_data = img._getexif()
         if exif_data:
             # EXIF tags for date/time, in order of preference.
-            # According to the user, 36867 is the corrected timestamp from Lightroom.
-            # 36867: DateTimeOriginal
-            # 36868: DateTimeDigitized
-            # 306: DateTime
+            # 36867: DateTimeOriginal, 36868: DateTimeDigitized, 306: DateTime
             for tag in [36867, 36868, 306]:
                 if tag in exif_data:
                     date_str = exif_data[tag]
-                    # The date string can sometimes be empty or malformed.
                     if date_str and isinstance(date_str, str):
                         date_str = date_str.strip().replace('\x00', '')
                         if date_str:
                             return datetime.datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
-    except Exception as e:
-        print(f"Could not read EXIF data: {e}")
+    except Exception:
+        # Suppressing EXIF read errors for a cleaner progress bar experience
+        pass
     return None
 
-def sync_client_folder_to_gcs(client_folder_name):
-    """
-    Synchronizes a single client's local folder to GCS and generates a manifest
-    sorted by EXIF date, falling back to local file modification time.
-    """
-    local_path = os.path.join(LOCAL_STAGING_DIR, client_folder_name)
-    gcs_prefix = f"{client_folder_name}/"
-
-    if not os.path.isdir(local_path):
-        print(f"Skipping '{client_folder_name}': Local path '{local_path}' is not a directory.")
-        return False
-
-    print(f"\nSynchronizing local folder '{local_path}' to GCS prefix '{gcs_prefix}'...")
-
-    try:
-        # Explicitly use the service account key for authentication
-        sa_key_path = os.path.join(os.path.dirname(__file__), '..', 'backend', 'gcp-sa-key.json')
-        if not os.path.exists(sa_key_path):
-            print(f"ERROR: Service account key not found at '{sa_key_path}'")
-            print("Please follow the setup instructions to create the key file.")
-            return False
-            
-        storage_client = storage.Client.from_service_account_json(sa_key_path)
-        bucket = storage_client.bucket(GCS_BUCKET_NAME)
-
-        # 1. Collect image information from local files first.
-        image_info = []
-        local_files = [
-            f for f in os.listdir(local_path) 
-            if os.path.isfile(os.path.join(local_path, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))
-        ]
-
-        if not local_files:
-            print(f"No images found in '{local_path}'. Skipping manifest generation.")
-            return True
-
-        print(f"Found {len(local_files)} images. Reading metadata...")
-        for filename in local_files:
-            local_item_path = os.path.join(local_path, filename)
-            with open(local_item_path, 'rb') as f:
-                image_bytes = f.read()
-            
-            exif_date = get_exif_date(image_bytes)
-            # Fallback to local file modification time if EXIF fails
-            mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(local_item_path))
-            
-            image_info.append({
-                "name": filename,
-                "local_path": local_item_path,
-                "timestamp": exif_date or mod_time
-            })
-
-        # 2. Sort images by the collected timestamp.
-        image_info.sort(key=lambda x: x["timestamp"])
-        
-        # 3. Upload sorted files to GCS.
-        print(f"Uploading {len(image_info)} images in sorted order...")
-        for img_data in image_info:
-            blob = bucket.blob(f"{gcs_prefix}{img_data['name']}")
-            blob.upload_from_filename(img_data['local_path'])
-            blob.make_public()
-            print(f"Uploaded '{img_data['name']}'.")
-
-        # 4. Generate and upload the manifest from the sorted list.
-        print(f"Generating manifest for '{client_folder_name}'...")
-        sorted_filenames = [img["name"] for img in image_info]
-        
-        manifest_blob = bucket.blob(f"{gcs_prefix}manifest.json")
-        manifest_blob.upload_from_string(
-            json.dumps(sorted_filenames, indent=2),
-            content_type='application/json'
-        )
-        manifest_blob.make_public()
-        print(f"Successfully generated and uploaded manifest for '{client_folder_name}'.")
-        
-        print(f"Successfully synchronized '{client_folder_name}'.")
-        return True
-
-    except Exception as e:
-        print(f"An unexpected error occurred during sync for '{client_folder_name}': {e}")
-        return False
-
 def main():
-    """Main function to iterate through client folders and sync them."""
+    """Main function to discover all images, process them with a global progress bar, and sync."""
     print("Starting GCS synchronization process...")
     print(f"Local staging directory: '{os.path.abspath(LOCAL_STAGING_DIR)}'")
     print(f"Target GCS Bucket: 'gs://{GCS_BUCKET_NAME}/'")
     print("-" * 30)
 
     if GCS_BUCKET_NAME == "YOUR_GCS_BUCKET_NAME_HERE":
-        print("ERROR: Please update GCS_BUCKET_NAME in this script with your actual GCS bucket name.")
+        print("ERROR: Please update GCS_BUCKET_NAME in this script.", file=sys.stderr)
         sys.exit(1)
 
     if not os.path.isdir(LOCAL_STAGING_DIR):
-        print(f"ERROR: Local staging directory '{LOCAL_STAGING_DIR}' not found.")
+        print(f"ERROR: Local staging directory '{LOCAL_STAGING_DIR}' not found.", file=sys.stderr)
         sys.exit(1)
 
-    client_folders = [
-        d for d in os.listdir(LOCAL_STAGING_DIR)
-        if os.path.isdir(os.path.join(LOCAL_STAGING_DIR, d))
-    ]
+    # --- 1. Discover all image files across all client folders ---
+    all_files_to_process = []
+    client_folders = [d for d in os.listdir(LOCAL_STAGING_DIR) if os.path.isdir(os.path.join(LOCAL_STAGING_DIR, d))]
+    client_folders.sort()  # Sort folders alphabetically
 
     if not client_folders:
-        print(f"No client folders found in '{LOCAL_STAGING_DIR}'. Nothing to sync.")
+        print("No client folders found. Nothing to sync.")
         sys.exit(0)
 
-    print(f"Found client folders to sync: {', '.join(client_folders)}")
-
-    successful_syncs = 0
-    failed_syncs = 0
-
+    print(f"Found client folders: {', '.join(client_folders)}")
     for folder_name in client_folders:
-        if sync_client_folder_to_gcs(folder_name):
-            successful_syncs += 1
-        else:
-            failed_syncs += 1
-    
-    print("-" * 30)
-    print("Synchronization summary:")
-    print(f"Successfully synced folders: {successful_syncs}")
-    print(f"Failed to sync folders: {failed_syncs}")
+        local_path = os.path.join(LOCAL_STAGING_DIR, folder_name)
+        image_files = [f for f in os.listdir(local_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))]
+        for filename in image_files:
+            all_files_to_process.append({
+                "folder": folder_name,
+                "name": filename,
+                "local_path": os.path.join(local_path, filename)
+            })
 
-    if failed_syncs > 0:
-        print("\nSome synchronizations failed. Please review the logs above.")
-        sys.exit(1)
-    else:
+    if not all_files_to_process:
+        print("No image files found in any client folder. Nothing to sync.")
+        sys.exit(0)
+
+    # --- 2. Read metadata for all files with a global progress bar ---
+    images_by_folder = {folder: [] for folder in client_folders}
+    print(f"\nReading metadata for {len(all_files_to_process)} images...")
+    with tqdm(total=len(all_files_to_process), desc="Reading metadata", unit="file") as pbar:
+        for file_info in all_files_to_process:
+            with open(file_info["local_path"], 'rb') as f:
+                image_bytes = f.read()
+            
+            exif_date = get_exif_date(image_bytes)
+            mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(file_info["local_path"]))
+            
+            file_info["timestamp"] = exif_date or mod_time
+            images_by_folder[file_info["folder"]].append(file_info)
+            pbar.update(1)
+
+    # --- 3. Sort images within each folder and prepare for upload ---
+    for folder in images_by_folder:
+        images_by_folder[folder].sort(key=lambda x: x["timestamp"])
+
+    # --- 4. Upload all files with a global progress bar and generate manifests ---
+    try:
+        sa_key_path = os.path.join(SCRIPT_DIR, '..', 'backend', 'gcp-sa-key.json')
+        if not os.path.exists(sa_key_path):
+            print(f"ERROR: Service account key not found at '{sa_key_path}'", file=sys.stderr)
+            sys.exit(1)
+            
+        storage_client = storage.Client.from_service_account_json(sa_key_path)
+        bucket = storage_client.bucket(GCS_BUCKET_NAME)
+
+        print(f"\nUploading {len(all_files_to_process)} images to GCS...")
+        with tqdm(total=len(all_files_to_process), desc="Uploading to GCS", unit="file") as pbar:
+            for folder_name in client_folders:  # Iterate using the sorted list
+                image_list = images_by_folder[folder_name]
+                if not image_list:
+                    continue
+
+                gcs_prefix = f"{folder_name}/"
+                for img_data in image_list:
+                    blob = bucket.blob(f"{gcs_prefix}{img_data['name']}")
+                    blob.upload_from_filename(img_data['local_path'])
+                    blob.make_public()
+                    pbar.update(1)
+                
+                # Generate and upload manifest for the folder
+                sorted_filenames = [img["name"] for img in image_list]
+                manifest_blob = bucket.blob(f"{gcs_prefix}manifest.json")
+                manifest_blob.upload_from_string(
+                    json.dumps(sorted_filenames, indent=2),
+                    content_type='application/json'
+                )
+                manifest_blob.make_public()
+        
         print("\nAll synchronizations completed successfully.")
         sys.exit(0)
+
+    except Exception as e:
+        print(f"\nAn unexpected error occurred during GCS upload: {e}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
