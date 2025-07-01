@@ -69,6 +69,24 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // If a manifest is provided, sort the images array before rendering
+        if (manifest && Array.isArray(manifest) && manifest.length > 0) {
+            console.log("Manifest found, sorting images before initial render.");
+            const manifestOrder = manifest.reduce((acc, name, index) => {
+                acc[name] = index;
+                return acc;
+            }, {});
+
+            images.sort((a, b) => {
+                const aIndex = manifestOrder[a];
+                const bIndex = manifestOrder[b];
+                // If a file isn't in the manifest, push it to the end.
+                if (aIndex === undefined) return 1;
+                if (bIndex === undefined) return -1;
+                return aIndex - bIndex;
+            });
+        }
+
         images.forEach(imageName => {
             const imgElement = document.createElement('img');
             imgElement.className = 'gallery-image-source grid__item-image-lazy js-lazy';
