@@ -352,36 +352,31 @@ footer .copyright {
     display: inline-block; /* Or 'block', depending on layout */
 }
 
-.filename-overlay {
+.filename-label {
   font-family: 'Oswald', sans-serif;
-  padding: 0.25rem;
-  position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
-  background-color: rgba(0, 0, 0, 0.5); /* Transparent black */
+  background-color: rgba(0, 0, 0, 0.5);
   color: white;
-  font-size: 12px;
+  position: absolute;
+  padding: 0.25rem;
+  pointer-events: auto;
   user-select: all;
-  /* Ensure the overlay doesn't exceed the image boundaries */
-  max-width: 100%;
-  box-sizing: border-box;
-  /* Text styling */
+  cursor: text;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+
+.filename-overlay {
+  top: 0.5rem;
+  left: 0.5rem;
+  font-size: 12px;
+  max-width: calc(100% - 1rem);
 }
 
 #lightbox-filename {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  color: white;
-  background-color: rgba(0, 0, 0, 0.5);
-  padding: 5px 10px;
-  border-radius: 3px;
   font-size: 14px;
   z-index: 1001;
-  pointer-events: none;
 }
 
 /* Button Styles */

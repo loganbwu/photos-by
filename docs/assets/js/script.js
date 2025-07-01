@@ -3,6 +3,7 @@ let currentIndex = 0;
 const lightbox = document.getElementById('lightbox');
 const lightboxImg = lightbox.querySelector('img');
 let hasWiggleAnimatedThisLoad = false; // Flag to track animation per page load
+let isPrivate = false;
 
 // Function to show a specific image in the lightbox
 function showImage(index) {
@@ -11,8 +12,9 @@ function showImage(index) {
   const image = images[currentIndex];
   lightboxImg.src = image.src;
   const lightboxFilename = document.getElementById('lightbox-filename');
-  if (lightboxFilename && document.getElementById('private-gallery-access')) {
+  if (lightboxFilename && isPrivate) {
     lightboxFilename.textContent = image.filename;
+    positionFilename();
   }
 }
 
@@ -21,11 +23,15 @@ function openLightbox(imgSrc, index) {
   const image = images[index];
   lightboxImg.src = image.src; // Set the source of the image in the lightbox
   const lightboxFilename = document.getElementById('lightbox-filename');
-  if (lightboxFilename && document.getElementById('private-gallery-access')) {
+  if (lightboxFilename && isPrivate) {
     lightboxFilename.textContent = image.filename;
   }
   lightbox.style.display = 'flex'; // Display the lightbox
   currentIndex = index; // Set the current index
+  if (isPrivate) {
+    // Use a short delay to allow the image to render and get correct dimensions
+    setTimeout(positionFilename, 50);
+  }
 
   // Wiggle animation logic
   const prevButton = document.getElementById('prev-button');
@@ -62,6 +68,18 @@ function prevImage() {
   showImage(currentIndex - 1);
 }
 
+function positionFilename() {
+    const lightboxFilename = document.getElementById('lightbox-filename');
+    if (!lightboxFilename || !isPrivate) return;
+
+    const imgRect = lightboxImg.getBoundingClientRect();
+    lightboxFilename.style.top = `${imgRect.top + 10}px`; // 10px padding from the top of the image
+    lightboxFilename.style.left = `${imgRect.left + 10}px`; // 10px padding from the left of the image
+}
+
+// Reposition filename on window resize
+window.addEventListener('resize', positionFilename);
+
 // Event listener to close the lightbox when the Escape key is pressed
 document.addEventListener('keydown', function(event) {
   if (event.key === 'Escape') {
@@ -75,7 +93,8 @@ document.addEventListener('keydown', function(event) {
 
 // Function to initialize lightbox state and listeners for gallery images
 // Make it globally accessible for gallery.js
-window.initializeLightboxStateAndListeners = function() {
+window.initializeLightboxStateAndListeners = function(isPrivateView = false) {
+  isPrivate = isPrivateView;
   images = []; // Clear existing images before repopulating
   const galleryImages = document.querySelectorAll('.grid__item-image');
   galleryImages.forEach((img, index) => {

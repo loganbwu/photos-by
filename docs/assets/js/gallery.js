@@ -172,7 +172,7 @@ function renderGallery() {
             // Conditionally add the overlay for private galleries
             if (isPrivateGalleryView) {
                 const overlay = document.createElement('div');
-                overlay.className = 'filename-overlay';
+                overlay.className = 'filename-label filename-overlay';
                 overlay.textContent = imgData.filename;
                 itemContainer.appendChild(overlay);
             }
@@ -184,7 +184,7 @@ function renderGallery() {
 
     // Re-initialize lightbox state and listeners after gallery is rendered
     if (typeof window.initializeLightboxStateAndListeners === 'function') {
-        window.initializeLightboxStateAndListeners();
+        window.initializeLightboxStateAndListeners(isPrivateGalleryView);
     }
 
     // Re-initialize lazy loading if applicable
