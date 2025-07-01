@@ -18,20 +18,46 @@ def get_exif_date(image_bytes):
     """
     Extracts the creation date from image EXIF data by checking multiple tags.
     It checks for DateTimeOriginal, DateTimeDigitized, and DateTime tags in that order.
+    It also attempts to get sub-second precision.
     """
     try:
         img = Image.open(BytesIO(image_bytes))
         exif_data = img._getexif()
         if exif_data:
             # EXIF tags for date/time, in order of preference.
-            # 36867: DateTimeOriginal, 36868: DateTimeDigitized, 306: DateTime
-            for tag in [36867, 36868, 306]:
-                if tag in exif_data:
-                    date_str = exif_data[tag]
-                    if date_str and isinstance(date_str, str):
-                        date_str = date_str.strip().replace('\x00', '')
-                        if date_str:
-                            return datetime.datetime.strptime(date_str, '%Y:%m:%d %H:%M:%S')
+            # 36867: DateTimeOriginal, 37521: SubSecTimeOriginal
+            # 36868: DateTimeDigitized, 37522: SubSecTimeDigitized
+            # 306: DateTime
+            date_str = None
+            sub_sec_str = None
+
+            if 36867 in exif_data:
+                date_str = exif_data[36867]
+                if 37521 in exif_data:
+                    sub_sec_str = exif_data[37521]
+            elif 36868 in exif_data:
+                date_str = exif_data[36868]
+                if 37522 in exif_data:
+                    sub_sec_str = exif_data[37522]
+            elif 306 in exif_data:
+                date_str = exif_data[306]
+
+            if date_str and isinstance(date_str, str):
+                date_str = date_str.strip().replace('\x00', '')
+                if date_str:
+                    full_date_str = date_str
+                    if sub_sec_str and isinstance(sub_sec_str, str):
+                        # Ensure sub_sec_str is not empty and contains only digits
+                        sub_sec_str = sub_sec_str.strip().replace('\x00', '')
+                        if sub_sec_str.isdigit():
+                            full_date_str += '.' + sub_sec_str
+                    
+                    # Try parsing with and without fractional seconds
+                    for fmt in ('%Y:%m:%d %H:%M:%S.%f', '%Y:%m:%d %H:%M:%S'):
+                        try:
+                            return datetime.datetime.strptime(full_date_str, fmt)
+                        except ValueError:
+                            continue
     except Exception:
         # Suppressing EXIF read errors for a cleaner progress bar experience
         pass
@@ -93,7 +119,7 @@ def main():
 
     # --- 3. Sort images within each folder and prepare for upload ---
     for folder in images_by_folder:
-        images_by_folder[folder].sort(key=lambda x: x["timestamp"])
+        images_by_folder[folder].sort(key=lambda x: (x["timestamp"], x["name"]))
 
     # --- 4. Upload all files with a global progress bar and generate manifests ---
     try:
