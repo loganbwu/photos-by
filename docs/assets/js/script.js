@@ -113,6 +113,11 @@ function openLightboxOnClick(src, index) {
 
 // Event listeners for general lightbox functionality (nav buttons, escape key)
 document.addEventListener('DOMContentLoaded', () => {
+  // Prevent right-click on lightbox image
+  if (lightboxImg) {
+    lightboxImg.addEventListener('contextmenu', e => e.preventDefault());
+  }
+  
   // Initial setup for gallery images - will be re-run by gallery.js after it renders
   initializeLightboxStateAndListeners();
 

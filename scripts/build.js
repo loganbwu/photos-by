@@ -3,10 +3,10 @@ const path = require('path');
 
 // --- Configuration ---
 const SRC_DIR = {
-    photos: 'photos',
-    partials: 'partials',
-    assets: 'assets',
-    templates: '.', // base.html.template is in the root
+    photos: 'frontend/photos',
+    partials: 'frontend/partials',
+    assets: 'frontend/assets',
+    templates: 'frontend', // base.html.template is in the frontend directory
 };
 
 const BUILD_DIR = 'docs';
@@ -120,8 +120,9 @@ function generateGalleryHTML(imageFiles) {
     imageFiles.forEach(imageFile => {
         // Improved alt text
         const descriptiveAlt = `Pole and aerial arts photo by Logan - ${imageFile.replace(/\.[^/.]+$/, "")}`;
+        const webPath = path.join('photos', imageFile).replace(/\\/g, '/'); // Ensure forward slashes for web
         html += `
-      <img src="${path.join(SRC_DIR.photos, imageFile)}" alt="${descriptiveAlt}" class="gallery-image-source grid__item-image-lazy js-lazy" onclick="openLightbox('${path.join(SRC_DIR.photos, imageFile)}')">`;
+      <img src="${webPath}" alt="${descriptiveAlt}" class="gallery-image-source grid__item-image-lazy js-lazy" onclick="openLightbox('${webPath}')">`;
     });
     html += `
     </div>`;

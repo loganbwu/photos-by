@@ -21,7 +21,7 @@ build-backend = "hatchling.build"
 
 [tool.rye.scripts]
 sync-gcs = { cmd = "python ../scripts/sync_gcs.py" }
-deploy = { cmd = "./deploy.sh" }
+deploy = { cmd = "../scripts/deploy.sh" }
 pip = { cmd = "pip" }
 
 [tool.rye]

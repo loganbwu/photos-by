@@ -167,6 +167,9 @@ function renderGallery() {
                 newImgElement.setAttribute('onclick', onclickAttribute);
             }
 
+            // Prevent right-click context menu
+            newImgElement.addEventListener('contextmenu', e => e.preventDefault());
+
             itemContainer.appendChild(newImgElement);
 
             // Conditionally add the overlay for private galleries
