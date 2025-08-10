@@ -168,7 +168,7 @@ function renderGallery() {
             }
 
             // Prevent right-click context menu
-            newImgElement.addEventListener('contextmenu', e => e.preventDefault());
+
 
             itemContainer.appendChild(newImgElement);
 
