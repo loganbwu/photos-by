@@ -131,11 +131,72 @@ def main():
         storage_client = storage.Client.from_service_account_json(sa_key_path)
         bucket = storage_client.bucket(GCS_BUCKET_NAME)
 
+        # --- 4. Delete old folders/files from GCS ---
+        print("\nChecking GCS for old folders and files to delete...")
+        gcs_blobs = list(bucket.list_blobs())
+        gcs_folders = set()
+        gcs_files = set()
+
+        for blob in gcs_blobs:
+            parts = blob.name.split('/')
+            if len(parts) > 1:
+                gcs_folders.add(parts[0])
+                gcs_files.add(blob.name)
+
+        local_client_folders_set = set(client_folders)
+        local_gcs_paths_set = set()
+        for file_info in all_files_to_process:
+            local_gcs_paths_set.add(f"{file_info['folder']}/{file_info['name']}")
+        
+        # Add manifests to local_gcs_paths_set for existing local folders
+        for folder_name in local_client_folders_set:
+            local_gcs_paths_set.add(f"{folder_name}/manifest.json")
+
+        # Identify folders to delete
+        folders_to_delete = gcs_folders - local_client_folders_set
+        if folders_to_delete:
+            print(f"Found GCS folders to delete: {', '.join(folders_to_delete)}")
+            with tqdm(total=len(folders_to_delete), desc="Deleting GCS folders", unit="folder") as pbar:
+                for folder_to_del in folders_to_delete:
+                    # List blobs with prefix and delete them
+                    blobs_to_delete_in_folder = list(bucket.list_blobs(prefix=f"{folder_to_del}/"))
+                    if blobs_to_delete_in_folder:
+                        bucket.delete_blobs(blobs_to_delete_in_folder)
+                    pbar.update(1)
+        else:
+            print("No old GCS folders to delete.")
+
+        # Identify individual files to delete within existing folders
+        files_to_delete = gcs_files - local_gcs_paths_set
+        # Filter out files that are part of folders already marked for deletion
+        files_to_delete_filtered = [
+            f for f in files_to_delete if f.split('/')[0] not in folders_to_delete
+        ]
+
+        if files_to_delete_filtered:
+            print(f"Found GCS files to delete: {', '.join(files_to_delete_filtered)}")
+            with tqdm(total=len(files_to_delete_filtered), desc="Deleting GCS files", unit="file") as pbar:
+                for file_to_del in files_to_delete_filtered:
+                    blob = bucket.blob(file_to_del)
+                    blob.delete()
+                    pbar.update(1)
+        else:
+            print("No old GCS files to delete.")
+
+        # --- 5. Upload all files with a global progress bar and generate manifests ---
         print(f"\nUploading {len(all_files_to_process)} images to GCS...")
         with tqdm(total=len(all_files_to_process), desc="Uploading to GCS", unit="file") as pbar:
             for folder_name in client_folders:  # Iterate using the sorted list
                 image_list = images_by_folder[folder_name]
                 if not image_list:
+                    # If a folder exists locally but has no images, ensure its manifest is still created/updated
+                    # This handles cases where a folder might temporarily be empty of images but still exists
+                    manifest_blob = bucket.blob(f"{folder_name}/manifest.json")
+                    manifest_blob.upload_from_string(
+                        json.dumps([], indent=2), # Empty manifest for empty folder
+                        content_type='application/json'
+                    )
+                    manifest_blob.make_public()
                     continue
 
                 gcs_prefix = f"{folder_name}/"
@@ -158,7 +219,7 @@ def main():
         sys.exit(0)
 
     except Exception as e:
-        print(f"\nAn unexpected error occurred during GCS upload: {e}", file=sys.stderr)
+        print(f"\nAn unexpected error occurred during GCS synchronization: {e}", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == "__main__":
