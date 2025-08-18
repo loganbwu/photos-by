@@ -16,9 +16,21 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // Check for album name in URL query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const albumNameFromUrl = urlParams.get('album');
+
+    if (albumNameFromUrl) {
+        albumNameInput.value = albumNameFromUrl.toLowerCase();
+        // Use requestAnimationFrame to ensure the UI is ready before clicking
+        requestAnimationFrame(() => {
+            submitButton.click();
+        });
+    }
+
     albumNameForm.addEventListener('submit', async (event) => { // Changed to form submit
         event.preventDefault(); // Prevent default form submission
-        const albumName = albumNameInput.value;
+        const albumName = albumNameInput.value.toLowerCase();
         if (!albumName) {
             displayError('Please enter an album name.');
             return;

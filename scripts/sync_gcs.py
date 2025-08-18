@@ -88,6 +88,20 @@ def main():
         sys.exit(0)
 
     print(f"Found client folders: {', '.join(client_folders)}")
+
+    # --- Check for case-insensitive folder name clashes ---
+    print("Checking for folder name clashes (case-insensitive)...")
+    seen_folders = {}
+    for folder in client_folders:
+        lower_folder = folder.lower()
+        if lower_folder in seen_folders:
+            print(f"ERROR: Clash detected. Folders '{seen_folders[lower_folder]}' and '{folder}' are the same when case is ignored.", file=sys.stderr)
+            print("Please rename one of the folders and try again.", file=sys.stderr)
+            sys.exit(1)
+        seen_folders[lower_folder] = folder
+    print("No clashes found.")
+    # ----------------------------------------------------
+
     for folder_name in client_folders:
         local_path = os.path.join(LOCAL_STAGING_DIR, folder_name)
         image_files = [f for f in os.listdir(local_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))]
@@ -143,17 +157,18 @@ def main():
                 gcs_folders.add(parts[0])
                 gcs_files.add(blob.name)
 
-        local_client_folders_set = set(client_folders)
+        local_client_folders_set_lower = {f.lower() for f in client_folders}
         local_gcs_paths_set = set()
         for file_info in all_files_to_process:
-            local_gcs_paths_set.add(f"{file_info['folder']}/{file_info['name']}")
+            # Use lowercase folder name for the GCS path
+            local_gcs_paths_set.add(f"{file_info['folder'].lower()}/{file_info['name']}")
         
         # Add manifests to local_gcs_paths_set for existing local folders
-        for folder_name in local_client_folders_set:
+        for folder_name in local_client_folders_set_lower:
             local_gcs_paths_set.add(f"{folder_name}/manifest.json")
 
         # Identify folders to delete
-        folders_to_delete = gcs_folders - local_client_folders_set
+        folders_to_delete = gcs_folders - local_client_folders_set_lower
         if folders_to_delete:
             print(f"Found GCS folders to delete: {', '.join(folders_to_delete)}")
             with tqdm(total=len(folders_to_delete), desc="Deleting GCS folders", unit="folder") as pbar:
@@ -191,7 +206,7 @@ def main():
                 if not image_list:
                     # If a folder exists locally but has no images, ensure its manifest is still created/updated
                     # This handles cases where a folder might temporarily be empty of images but still exists
-                    manifest_blob = bucket.blob(f"{folder_name}/manifest.json")
+                    manifest_blob = bucket.blob(f"{folder_name.lower()}/manifest.json")
                     manifest_blob.upload_from_string(
                         json.dumps([], indent=2), # Empty manifest for empty folder
                         content_type='application/json'
@@ -199,7 +214,8 @@ def main():
                     manifest_blob.make_public()
                     continue
 
-                gcs_prefix = f"{folder_name}/"
+                # Use the lowercase folder name for the GCS prefix
+                gcs_prefix = f"{folder_name.lower()}/"
                 for img_data in image_list:
                     blob = bucket.blob(f"{gcs_prefix}{img_data['name']}")
                     blob.upload_from_filename(img_data['local_path'])
