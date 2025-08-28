@@ -293,32 +293,68 @@ def main():
         else:
             print("\nNo files need uploading - all are identical to GCS versions.")
         
-        # Generate and upload manifests for all folders (always update manifests)
-        print(f"\nUpdating manifests for {len(client_folders)} folders...")
-        with tqdm(total=len(client_folders), desc="Updating manifests", unit="folder") as pbar:
+        # Generate and upload manifests for all folders (check for changes first)
+        print(f"\nChecking manifests for {len(client_folders)} folders...")
+        manifests_to_upload = []
+        manifests_to_skip = []
+        
+        with tqdm(total=len(client_folders), desc="Comparing manifests", unit="folder") as pbar:
             for folder_name in client_folders:
                 image_list = images_by_folder[folder_name]
                 gcs_prefix = f"{folder_name.lower()}/"
+                manifest_path = f"{gcs_prefix}manifest.json"
                 
+                # Generate the new manifest content
                 if not image_list:
-                    # Empty folder - create empty manifest
-                    manifest_blob = bucket.blob(f"{gcs_prefix}manifest.json")
-                    manifest_blob.upload_from_string(
-                        json.dumps([], indent=2),
-                        content_type='application/json'
-                    )
-                    manifest_blob.make_public()
+                    new_manifest_content = json.dumps([], indent=2)
                 else:
-                    # Generate manifest with sorted filenames
                     sorted_filenames = [img["name"] for img in image_list]
-                    manifest_blob = bucket.blob(f"{gcs_prefix}manifest.json")
-                    manifest_blob.upload_from_string(
-                        json.dumps(sorted_filenames, indent=2),
-                        content_type='application/json'
-                    )
-                    manifest_blob.make_public()
+                    new_manifest_content = json.dumps(sorted_filenames, indent=2)
+                
+                # Check if manifest exists and compare content
+                should_upload = True
+                if manifest_path in gcs_blob_map:
+                    existing_manifest_blob = gcs_blob_map[manifest_path]
+                    try:
+                        # Download existing manifest content
+                        existing_content = existing_manifest_blob.download_as_text()
+                        if existing_content.strip() == new_manifest_content.strip():
+                            should_upload = False
+                            manifests_to_skip.append({
+                                'folder': folder_name,
+                                'path': manifest_path
+                            })
+                    except Exception:
+                        # If we can't read the existing manifest, upload the new one
+                        pass
+                
+                if should_upload:
+                    manifests_to_upload.append({
+                        'folder': folder_name,
+                        'path': manifest_path,
+                        'content': new_manifest_content
+                    })
                 
                 pbar.update(1)
+        
+        # Report manifest comparison results
+        print(f"Manifests to upload: {len(manifests_to_upload)} (new or changed)")
+        print(f"Manifests to skip: {len(manifests_to_skip)} (identical)")
+        
+        # Upload only the manifests that need updating
+        if manifests_to_upload:
+            print(f"\nUploading {len(manifests_to_upload)} manifests...")
+            with tqdm(total=len(manifests_to_upload), desc="Updating manifests", unit="manifest") as pbar:
+                for manifest_info in manifests_to_upload:
+                    manifest_blob = bucket.blob(manifest_info['path'])
+                    manifest_blob.upload_from_string(
+                        manifest_info['content'],
+                        content_type='application/json'
+                    )
+                    manifest_blob.make_public()
+                    pbar.update(1)
+        else:
+            print("\nNo manifests need updating - all are identical to GCS versions.")
         
         print("\nAll synchronizations completed successfully.")
         sys.exit(0)
