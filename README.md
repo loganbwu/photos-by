@@ -105,14 +105,15 @@ The backend is a FastAPI application managed with [Rye](https://rye-up.com/) tha
 
 ### Sync Optimization
 
-The GCS sync script is optimized to avoid re-uploading identical files:
+The GCS sync script is optimized to avoid re-uploading identical files and manifests:
 
 *   **MD5 Hash Comparison:** Compares local file MD5 hashes with GCS blob hashes to detect identical files
 *   **File Size Pre-check:** Quick size comparison before hash calculation for faster processing
-*   **Smart Upload:** Only uploads new or changed files, skipping identical ones
-*   **Progress Reporting:** Shows detailed statistics of files uploaded vs. skipped
+*   **Manifest Content Comparison:** Downloads and compares existing manifest JSON content with new content
+*   **Smart Upload:** Only uploads new or changed files and manifests, skipping identical ones
+*   **Progress Reporting:** Shows detailed statistics of files and manifests uploaded vs. skipped
 
-This optimization significantly reduces sync time, especially for large galleries where most files haven't changed.
+This optimization significantly reduces sync time, especially for large galleries where most files haven't changed. In a typical sync with no changes, all 1,346 files and 23 manifests are skipped, completing in seconds rather than minutes.
 
 ### Deployment (Backend)
 
