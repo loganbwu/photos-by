@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import hashlib
 from google.cloud import storage
 from PIL import Image
 from io import BytesIO
@@ -13,6 +14,54 @@ GCS_BUCKET_NAME = "photos-by-logan-content"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOCAL_STAGING_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, "..", "backend", "gcs_local_staging"))
 # ---------------------
+
+def calculate_md5_hash(file_path):
+    """
+    Calculate MD5 hash of a local file.
+    """
+    hash_md5 = hashlib.md5()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+def files_are_identical(local_file_path, gcs_blob):
+    """
+    Compare local file with GCS blob to determine if they are identical.
+    Uses MD5 hash comparison as primary method, with file size as a quick pre-check.
+    
+    Args:
+        local_file_path (str): Path to the local file
+        gcs_blob: Google Cloud Storage blob object
+    
+    Returns:
+        bool: True if files are identical, False otherwise
+    """
+    try:
+        # Quick size check first
+        local_size = os.path.getsize(local_file_path)
+        if gcs_blob.size != local_size:
+            return False
+        
+        # If sizes match, compare MD5 hashes
+        local_md5 = calculate_md5_hash(local_file_path)
+        
+        # GCS stores MD5 hash in base64, but we need hex format
+        # Convert GCS MD5 from base64 to hex for comparison
+        if gcs_blob.md5_hash:
+            import base64
+            gcs_md5_bytes = base64.b64decode(gcs_blob.md5_hash)
+            gcs_md5_hex = gcs_md5_bytes.hex()
+            return local_md5 == gcs_md5_hex
+        
+        # If no MD5 hash available from GCS, assume files are different
+        # (this is a conservative approach to avoid skipping uploads when unsure)
+        return False
+        
+    except Exception:
+        # If any error occurs during comparison, assume files are different
+        # to ensure we don't skip necessary uploads
+        return False
 
 def get_exif_date(image_bytes):
     """
@@ -198,38 +247,78 @@ def main():
         else:
             print("No old GCS files to delete.")
 
-        # --- 5. Upload all files with a global progress bar and generate manifests ---
-        print(f"\nUploading {len(all_files_to_process)} images to GCS...")
-        with tqdm(total=len(all_files_to_process), desc="Uploading to GCS", unit="file") as pbar:
-            for folder_name in client_folders:  # Iterate using the sorted list
+        # --- 5. Check existing files and upload only changed/new files ---
+        print(f"\nChecking {len(all_files_to_process)} images for changes...")
+        
+        # Create a mapping of existing GCS blobs for quick lookup
+        gcs_blob_map = {}
+        for blob in gcs_blobs:
+            gcs_blob_map[blob.name] = blob
+        
+        files_to_upload = []
+        files_to_skip = []
+        
+        # Check each file to see if it needs uploading
+        with tqdm(total=len(all_files_to_process), desc="Comparing files", unit="file") as pbar:
+            for file_info in all_files_to_process:
+                gcs_path = f"{file_info['folder'].lower()}/{file_info['name']}"
+                
+                if gcs_path in gcs_blob_map:
+                    # File exists in GCS, check if it's identical
+                    existing_blob = gcs_blob_map[gcs_path]
+                    if files_are_identical(file_info['local_path'], existing_blob):
+                        files_to_skip.append(file_info)
+                    else:
+                        files_to_upload.append(file_info)
+                else:
+                    # File doesn't exist in GCS, needs uploading
+                    files_to_upload.append(file_info)
+                
+                pbar.update(1)
+        
+        # Report comparison results
+        print(f"Files to upload: {len(files_to_upload)} (new or changed)")
+        print(f"Files to skip: {len(files_to_skip)} (identical)")
+        
+        # Upload only the files that need uploading
+        if files_to_upload:
+            print(f"\nUploading {len(files_to_upload)} images to GCS...")
+            with tqdm(total=len(files_to_upload), desc="Uploading to GCS", unit="file") as pbar:
+                for file_info in files_to_upload:
+                    gcs_path = f"{file_info['folder'].lower()}/{file_info['name']}"
+                    blob = bucket.blob(gcs_path)
+                    blob.upload_from_filename(file_info['local_path'])
+                    blob.make_public()
+                    pbar.update(1)
+        else:
+            print("\nNo files need uploading - all are identical to GCS versions.")
+        
+        # Generate and upload manifests for all folders (always update manifests)
+        print(f"\nUpdating manifests for {len(client_folders)} folders...")
+        with tqdm(total=len(client_folders), desc="Updating manifests", unit="folder") as pbar:
+            for folder_name in client_folders:
                 image_list = images_by_folder[folder_name]
+                gcs_prefix = f"{folder_name.lower()}/"
+                
                 if not image_list:
-                    # If a folder exists locally but has no images, ensure its manifest is still created/updated
-                    # This handles cases where a folder might temporarily be empty of images but still exists
-                    manifest_blob = bucket.blob(f"{folder_name.lower()}/manifest.json")
+                    # Empty folder - create empty manifest
+                    manifest_blob = bucket.blob(f"{gcs_prefix}manifest.json")
                     manifest_blob.upload_from_string(
-                        json.dumps([], indent=2), # Empty manifest for empty folder
+                        json.dumps([], indent=2),
                         content_type='application/json'
                     )
                     manifest_blob.make_public()
-                    continue
-
-                # Use the lowercase folder name for the GCS prefix
-                gcs_prefix = f"{folder_name.lower()}/"
-                for img_data in image_list:
-                    blob = bucket.blob(f"{gcs_prefix}{img_data['name']}")
-                    blob.upload_from_filename(img_data['local_path'])
-                    blob.make_public()
-                    pbar.update(1)
+                else:
+                    # Generate manifest with sorted filenames
+                    sorted_filenames = [img["name"] for img in image_list]
+                    manifest_blob = bucket.blob(f"{gcs_prefix}manifest.json")
+                    manifest_blob.upload_from_string(
+                        json.dumps(sorted_filenames, indent=2),
+                        content_type='application/json'
+                    )
+                    manifest_blob.make_public()
                 
-                # Generate and upload manifest for the folder
-                sorted_filenames = [img["name"] for img in image_list]
-                manifest_blob = bucket.blob(f"{gcs_prefix}manifest.json")
-                manifest_blob.upload_from_string(
-                    json.dumps(sorted_filenames, indent=2),
-                    content_type='application/json'
-                )
-                manifest_blob.make_public()
+                pbar.update(1)
         
         print("\nAll synchronizations completed successfully.")
         sys.exit(0)
