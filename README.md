@@ -103,6 +103,17 @@ The backend is a FastAPI application managed with [Rye](https://rye-up.com/) tha
     rye run sync-gcs
     ```
 
+### Sync Optimization
+
+The GCS sync script is optimized to avoid re-uploading identical files:
+
+*   **MD5 Hash Comparison:** Compares local file MD5 hashes with GCS blob hashes to detect identical files
+*   **File Size Pre-check:** Quick size comparison before hash calculation for faster processing
+*   **Smart Upload:** Only uploads new or changed files, skipping identical ones
+*   **Progress Reporting:** Shows detailed statistics of files uploaded vs. skipped
+
+This optimization significantly reduces sync time, especially for large galleries where most files haven't changed.
+
 ### Deployment (Backend)
 
 The backend is deployed to Google Cloud Functions (2nd Gen) using the `deploy.sh` script.
