@@ -215,6 +215,7 @@ header nav a:hover {
     justify-content: center;
     align-items: center;
     overflow: hidden;
+    background: transparent;
 }
 
 #lightbox img,

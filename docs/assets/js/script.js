@@ -18,8 +18,38 @@ function showImage(index) {
   }
 }
 
+// Variables for image container and additional images (global scope)
+let imageContainer = null;
+let nextImg = null;
+let prevImg = null;
+
+// Function to initialize the swipe container (called when lightbox opens)
+function initializeSwipeContainer() {
+  if (imageContainer) return; // Already initialized
+  
+  // Create container for image transitions
+  imageContainer = document.createElement('div');
+  imageContainer.className = 'lightbox-image-container';
+  
+  // Move the existing image into the container
+  lightboxImg.parentNode.insertBefore(imageContainer, lightboxImg);
+  imageContainer.appendChild(lightboxImg);
+  
+  // Create next and previous image elements for smooth transitions
+  nextImg = document.createElement('img');
+  nextImg.className = 'lightbox-image lightbox-next-image';
+  prevImg = document.createElement('img');
+  prevImg.className = 'lightbox-image lightbox-prev-image';
+  
+  imageContainer.appendChild(nextImg);
+  imageContainer.appendChild(prevImg);
+}
+
 // Function to open the lightbox with the selected image
 function openLightbox(imgSrc, index) {
+  // Initialize swipe container if not already done
+  initializeSwipeContainer();
+  
   const image = images[index];
   lightboxImg.src = image.src; // Set the source of the image in the lightbox
   const lightboxFilename = document.getElementById('lightbox-filename');
@@ -138,23 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let dragOffset = 0;
   const minSwipeDistance = 50; // pixels
   const swipeThreshold = 0.3; // 30% of screen width to trigger swipe
-  
-  // Create container for image transitions
-  const imageContainer = document.createElement('div');
-  imageContainer.className = 'lightbox-image-container';
-  
-  // Move the existing image into the container
-  lightboxImg.parentNode.insertBefore(imageContainer, lightboxImg);
-  imageContainer.appendChild(lightboxImg);
-  
-  // Create next and previous image elements for smooth transitions
-  const nextImg = document.createElement('img');
-  nextImg.className = 'lightbox-image lightbox-next-image';
-  const prevImg = document.createElement('img');
-  prevImg.className = 'lightbox-image lightbox-prev-image';
-  
-  imageContainer.appendChild(nextImg);
-  imageContainer.appendChild(prevImg);
 
   lightbox.addEventListener('touchstart', (e) => {
     touchStartX = e.touches[0].clientX;
