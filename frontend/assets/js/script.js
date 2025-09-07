@@ -130,27 +130,165 @@ document.addEventListener('DOMContentLoaded', () => {
     nextButton.addEventListener('click', nextImage);
   }
 
-  // Swipe functionality for mobile
+  // Enhanced swipe functionality for mobile with drag interaction
   let touchStartX = 0;
-  let touchEndX = 0;
+  let touchStartY = 0;
+  let currentTouchX = 0;
+  let isDragging = false;
+  let dragOffset = 0;
   const minSwipeDistance = 50; // pixels
+  const swipeThreshold = 0.3; // 30% of screen width to trigger swipe
+  
+  // Create container for image transitions
+  const imageContainer = document.createElement('div');
+  imageContainer.className = 'lightbox-image-container';
+  
+  // Move the existing image into the container
+  lightboxImg.parentNode.insertBefore(imageContainer, lightboxImg);
+  imageContainer.appendChild(lightboxImg);
+  
+  // Create next and previous image elements for smooth transitions
+  const nextImg = document.createElement('img');
+  nextImg.className = 'lightbox-image lightbox-next-image';
+  const prevImg = document.createElement('img');
+  prevImg.className = 'lightbox-image lightbox-prev-image';
+  
+  imageContainer.appendChild(nextImg);
+  imageContainer.appendChild(prevImg);
 
   lightbox.addEventListener('touchstart', (e) => {
     touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    currentTouchX = touchStartX;
+    isDragging = false;
+    dragOffset = 0;
+    
+    // Prepare adjacent images
+    if (images.length > 1) {
+      const nextIndex = (currentIndex + 1) % images.length;
+      const prevIndex = (currentIndex - 1 + images.length) % images.length;
+      nextImg.src = images[nextIndex].src;
+      prevImg.src = images[prevIndex].src;
+    }
   });
 
   lightbox.addEventListener('touchmove', (e) => {
-    touchEndX = e.touches[0].clientX;
+    e.preventDefault(); // Prevent scrolling
+    currentTouchX = e.touches[0].clientX;
+    const touchY = e.touches[0].clientY;
+    
+    const deltaX = currentTouchX - touchStartX;
+    const deltaY = touchY - touchStartY;
+    
+    // Only start dragging if horizontal movement is greater than vertical
+    if (!isDragging && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+      isDragging = true;
+    }
+    
+    if (isDragging && images.length > 1) {
+      dragOffset = deltaX;
+      updateImagePositions(dragOffset);
+    }
   });
 
   lightbox.addEventListener('touchend', () => {
-    if (touchEndX < touchStartX - minSwipeDistance) {
-      nextImage(); // Swiped left
+    if (isDragging && images.length > 1) {
+      const screenWidth = window.innerWidth;
+      const swipeDistance = Math.abs(dragOffset);
+      const swipePercentage = swipeDistance / screenWidth;
+      
+      if (swipePercentage > swipeThreshold || swipeDistance > minSwipeDistance) {
+        // Complete the swipe
+        if (dragOffset < 0) {
+          // Swiped left - go to next image
+          completeSwipe('next');
+        } else {
+          // Swiped right - go to previous image
+          completeSwipe('prev');
+        }
+      } else {
+        // Snap back to current image
+        snapBack();
+      }
     }
-    if (touchEndX > touchStartX + minSwipeDistance) {
-      prevImage(); // Swiped right
-    }
+    
+    // Reset values
     touchStartX = 0;
-    touchEndX = 0;
+    touchStartY = 0;
+    currentTouchX = 0;
+    isDragging = false;
+    dragOffset = 0;
   });
+  
+  function updateImagePositions(offset) {
+    const screenWidth = window.innerWidth;
+    
+    // Move current image
+    lightboxImg.style.transform = `translateX(${offset}px)`;
+    
+    if (offset < 0) {
+      // Dragging left - show next image
+      nextImg.style.transform = `translateX(${screenWidth + offset}px)`;
+      nextImg.style.opacity = '1';
+      prevImg.style.opacity = '0';
+    } else {
+      // Dragging right - show previous image
+      prevImg.style.transform = `translateX(${-screenWidth + offset}px)`;
+      prevImg.style.opacity = '1';
+      nextImg.style.opacity = '0';
+    }
+  }
+  
+  function completeSwipe(direction) {
+    const screenWidth = window.innerWidth;
+    
+    // Add transition for smooth completion
+    lightboxImg.style.transition = 'transform 0.3s ease-out';
+    nextImg.style.transition = 'transform 0.3s ease-out';
+    prevImg.style.transition = 'transform 0.3s ease-out';
+    
+    if (direction === 'next') {
+      lightboxImg.style.transform = `translateX(-${screenWidth}px)`;
+      nextImg.style.transform = 'translateX(0)';
+      setTimeout(() => {
+        nextImage();
+        resetImagePositions();
+      }, 300);
+    } else {
+      lightboxImg.style.transform = `translateX(${screenWidth}px)`;
+      prevImg.style.transform = 'translateX(0)';
+      setTimeout(() => {
+        prevImage();
+        resetImagePositions();
+      }, 300);
+    }
+  }
+  
+  function snapBack() {
+    // Add transition for smooth snap back
+    lightboxImg.style.transition = 'transform 0.3s ease-out';
+    nextImg.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+    prevImg.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+    
+    // Reset positions
+    lightboxImg.style.transform = 'translateX(0)';
+    nextImg.style.transform = 'translateX(100vw)';
+    prevImg.style.transform = 'translateX(-100vw)';
+    nextImg.style.opacity = '0';
+    prevImg.style.opacity = '0';
+    
+    setTimeout(resetImagePositions, 300);
+  }
+  
+  function resetImagePositions() {
+    // Remove transitions and reset positions
+    lightboxImg.style.transition = '';
+    nextImg.style.transition = '';
+    prevImg.style.transition = '';
+    lightboxImg.style.transform = '';
+    nextImg.style.transform = '';
+    prevImg.style.transform = '';
+    nextImg.style.opacity = '0';
+    prevImg.style.opacity = '0';
+  }
 });
