@@ -188,6 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const swipeThreshold = 0.3; // 30% of screen width to trigger swipe
 
   function pointerDown(e) {
+    e.preventDefault(); // Prevent default browser actions like image saving
     isPointerDown = true;
     lightbox.style.cursor = 'grabbing';
     touchStartX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -265,6 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
   lightbox.addEventListener('mousemove', pointerMove);
   lightbox.addEventListener('mouseup', pointerUp);
   lightbox.addEventListener('mouseleave', pointerUp); // Also end drag on mouse leave
+  lightbox.addEventListener('dragstart', (e) => e.preventDefault()); // Prevent default drag behavior
   
   function updateImagePositions(offset) {
     const screenWidth = window.innerWidth;
