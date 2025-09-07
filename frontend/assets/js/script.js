@@ -105,12 +105,80 @@ function closeLightbox() {
 
 // Function to navigate to the next image
 function nextImage() {
-  showImage(currentIndex + 1);
+  if (images.length <= 1) return;
+  
+  // Initialize swipe container if not already done
+  initializeSwipeContainer();
+  
+  // Prepare adjacent images for animation
+  const nextIndex = (currentIndex + 1) % images.length;
+  const prevIndex = (currentIndex - 1 + images.length) % images.length;
+  nextImg.src = images[nextIndex].src;
+  prevImg.src = images[prevIndex].src;
+  
+  // Trigger swipe animation
+  completeSwipe('next');
 }
 
 // Function to navigate to the previous image
 function prevImage() {
-  showImage(currentIndex - 1);
+  if (images.length <= 1) return;
+  
+  // Initialize swipe container if not already done
+  initializeSwipeContainer();
+  
+  // Prepare adjacent images for animation
+  const nextIndex = (currentIndex + 1) % images.length;
+  const prevIndex = (currentIndex - 1 + images.length) % images.length;
+  nextImg.src = images[nextIndex].src;
+  prevImg.src = images[prevIndex].src;
+  
+  // Trigger swipe animation
+  completeSwipe('prev');
+}
+
+// Function to complete swipe animation (moved to global scope)
+function completeSwipe(direction) {
+  const screenWidth = window.innerWidth;
+  
+  // Add transition for smooth completion
+  lightboxImg.style.transition = 'transform 0.3s ease-out';
+  nextImg.style.transition = 'transform 0.3s ease-out';
+  prevImg.style.transition = 'transform 0.3s ease-out';
+  
+  if (direction === 'next') {
+    lightboxImg.style.transform = `translateX(-${screenWidth}px)`;
+    nextImg.style.transform = 'translateX(0)';
+    setTimeout(() => {
+      showImage(currentIndex + 1);
+      resetImagePositions();
+    }, 300);
+  } else {
+    lightboxImg.style.transform = `translateX(${screenWidth}px)`;
+    prevImg.style.transform = 'translateX(0)';
+    setTimeout(() => {
+      showImage(currentIndex - 1);
+      resetImagePositions();
+    }, 300);
+  }
+}
+
+// Function to reset image positions after animation
+function resetImagePositions() {
+  // Remove transitions and reset positions
+  lightboxImg.style.transition = '';
+  nextImg.style.transition = '';
+  prevImg.style.transition = '';
+  lightboxImg.style.transform = '';
+  nextImg.style.transform = '';
+  prevImg.style.transform = '';
+  nextImg.style.opacity = '0';
+  prevImg.style.opacity = '0';
+  
+  // Ensure filename is repositioned after swipe for private galleries
+  if (isPrivate) {
+    setTimeout(positionFilename, 50);
+  }
 }
 
 function positionFilename() {
@@ -287,31 +355,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  function completeSwipe(direction) {
-    const screenWidth = window.innerWidth;
-    
-    // Add transition for smooth completion
-    lightboxImg.style.transition = 'transform 0.3s ease-out';
-    nextImg.style.transition = 'transform 0.3s ease-out';
-    prevImg.style.transition = 'transform 0.3s ease-out';
-    
-    if (direction === 'next') {
-      lightboxImg.style.transform = `translateX(-${screenWidth}px)`;
-      nextImg.style.transform = 'translateX(0)';
-      setTimeout(() => {
-        nextImage();
-        resetImagePositions();
-      }, 300);
-    } else {
-      lightboxImg.style.transform = `translateX(${screenWidth}px)`;
-      prevImg.style.transform = 'translateX(0)';
-      setTimeout(() => {
-        prevImage();
-        resetImagePositions();
-      }, 300);
-    }
-  }
-  
   function snapBack() {
     // Add transition for smooth snap back
     lightboxImg.style.transition = 'transform 0.3s ease-out';
@@ -326,22 +369,5 @@ document.addEventListener('DOMContentLoaded', () => {
     prevImg.style.opacity = '0';
     
     setTimeout(resetImagePositions, 300);
-  }
-  
-  function resetImagePositions() {
-    // Remove transitions and reset positions
-    lightboxImg.style.transition = '';
-    nextImg.style.transition = '';
-    prevImg.style.transition = '';
-    lightboxImg.style.transform = '';
-    nextImg.style.transform = '';
-    prevImg.style.transform = '';
-    nextImg.style.opacity = '0';
-    prevImg.style.opacity = '0';
-    
-    // Ensure filename is repositioned after swipe for private galleries
-    if (isPrivate) {
-      setTimeout(positionFilename, 50);
-    }
   }
 });
