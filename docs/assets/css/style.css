@@ -405,6 +405,17 @@ footer .copyright {
   position: absolute;
   font-size: 14px;
   z-index: 1001;
+  font-family: 'Oswald', sans-serif;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 0.25rem;
+  pointer-events: auto;
+  user-select: all;
+  cursor: text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 
 /* Button Styles */
