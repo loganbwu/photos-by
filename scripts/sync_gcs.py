@@ -181,8 +181,12 @@ def main():
             pbar.update(1)
 
     # --- 3. Sort images within each folder and prepare for upload ---
+    def get_filename_without_extension(filename):
+        """Strip file extension for alphabetical comparison."""
+        return os.path.splitext(filename)[0]
+    
     for folder in images_by_folder:
-        images_by_folder[folder].sort(key=lambda x: (x["timestamp"], x["name"]))
+        images_by_folder[folder].sort(key=lambda x: (x["timestamp"], get_filename_without_extension(x["name"])))
 
     # --- 4. Upload all files with a global progress bar and generate manifests ---
     try:
