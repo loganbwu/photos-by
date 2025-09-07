@@ -117,15 +117,11 @@ function positionFilename() {
     const lightboxFilename = document.getElementById('lightbox-filename');
     if (!lightboxFilename || !isPrivate) return;
 
-    const containerRect = imageContainer.getBoundingClientRect();
     const imgRect = lightboxImg.getBoundingClientRect();
-
-    // Calculate the position relative to the container
-    const top = imgRect.top - containerRect.top + 10;
-    const left = imgRect.left - containerRect.left + 10;
-
-    lightboxFilename.style.top = `${top}px`;
-    lightboxFilename.style.left = `${left}px`;
+    
+    // Position the filename relative to the lightbox container
+    lightboxFilename.style.top = `${imgRect.top + 10}px`;
+    lightboxFilename.style.left = `${imgRect.left + 10}px`;
 }
 
 // Reposition filename on window resize
