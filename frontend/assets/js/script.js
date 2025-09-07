@@ -177,7 +177,8 @@ document.addEventListener('DOMContentLoaded', () => {
     nextButton.addEventListener('click', nextImage);
   }
 
-  // Enhanced swipe functionality for mobile with drag interaction
+  // Enhanced swipe and drag functionality for mobile and desktop
+  let isPointerDown = false;
   let touchStartX = 0;
   let touchStartY = 0;
   let currentTouchX = 0;
@@ -186,9 +187,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const minSwipeDistance = 50; // pixels
   const swipeThreshold = 0.3; // 30% of screen width to trigger swipe
 
-  lightbox.addEventListener('touchstart', (e) => {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
+  function pointerDown(e) {
+    isPointerDown = true;
+    lightbox.style.cursor = 'grabbing';
+    touchStartX = e.touches ? e.touches[0].clientX : e.clientX;
+    touchStartY = e.touches ? e.touches[0].clientY : e.clientY;
     currentTouchX = touchStartX;
     isDragging = false;
     dragOffset = 0;
@@ -200,12 +203,13 @@ document.addEventListener('DOMContentLoaded', () => {
       nextImg.src = images[nextIndex].src;
       prevImg.src = images[prevIndex].src;
     }
-  });
+  }
 
-  lightbox.addEventListener('touchmove', (e) => {
-    e.preventDefault(); // Prevent scrolling
-    currentTouchX = e.touches[0].clientX;
-    const touchY = e.touches[0].clientY;
+  function pointerMove(e) {
+    if (!isPointerDown) return;
+    e.preventDefault(); // Prevent default browser actions like image saving
+    currentTouchX = e.touches ? e.touches[0].clientX : e.clientX;
+    const touchY = e.touches ? e.touches[0].clientY : e.clientY;
     
     const deltaX = currentTouchX - touchStartX;
     const deltaY = touchY - touchStartY;
@@ -219,9 +223,13 @@ document.addEventListener('DOMContentLoaded', () => {
       dragOffset = deltaX;
       updateImagePositions(dragOffset);
     }
-  });
+  }
 
-  lightbox.addEventListener('touchend', () => {
+  function pointerUp(e) {
+    if (!isPointerDown) return;
+    isPointerDown = false;
+    lightbox.style.cursor = 'default';
+
     if (isDragging && images.length > 1) {
       const screenWidth = window.innerWidth;
       const swipeDistance = Math.abs(dragOffset);
@@ -243,12 +251,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Reset values
-    touchStartX = 0;
-    touchStartY = 0;
-    currentTouchX = 0;
     isDragging = false;
     dragOffset = 0;
-  });
+  }
+
+  // Touch events
+  lightbox.addEventListener('touchstart', pointerDown);
+  lightbox.addEventListener('touchmove', pointerMove);
+  lightbox.addEventListener('touchend', pointerUp);
+
+  // Mouse events
+  lightbox.addEventListener('mousedown', pointerDown);
+  lightbox.addEventListener('mousemove', pointerMove);
+  lightbox.addEventListener('mouseup', pointerUp);
+  lightbox.addEventListener('mouseleave', pointerUp); // Also end drag on mouse leave
   
   function updateImagePositions(offset) {
     const screenWidth = window.innerWidth;
