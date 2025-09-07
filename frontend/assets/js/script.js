@@ -318,5 +318,10 @@ document.addEventListener('DOMContentLoaded', () => {
     prevImg.style.transform = '';
     nextImg.style.opacity = '0';
     prevImg.style.opacity = '0';
+    
+    // Ensure filename is repositioned after swipe for private galleries
+    if (isPrivate) {
+      setTimeout(positionFilename, 50);
+    }
   }
 });
