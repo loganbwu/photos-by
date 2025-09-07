@@ -12,9 +12,16 @@ function showImage(index) {
   const image = images[currentIndex];
   lightboxImg.src = image.src;
   const lightboxFilename = document.getElementById('lightbox-filename');
-  if (lightboxFilename && isPrivate) {
-    lightboxFilename.textContent = image.filename;
-    positionFilename();
+  
+  // Handle filename display - only show for private galleries
+  if (lightboxFilename) {
+    if (isPrivate) {
+      lightboxFilename.textContent = image.filename;
+      lightboxFilename.style.display = 'block';
+      positionFilename();
+    } else {
+      lightboxFilename.style.display = 'none';
+    }
   }
 }
 
@@ -53,9 +60,17 @@ function openLightbox(imgSrc, index) {
   const image = images[index];
   lightboxImg.src = image.src; // Set the source of the image in the lightbox
   const lightboxFilename = document.getElementById('lightbox-filename');
-  if (lightboxFilename && isPrivate) {
-    lightboxFilename.textContent = image.filename;
+  
+  // Handle filename display - only show for private galleries
+  if (lightboxFilename) {
+    if (isPrivate) {
+      lightboxFilename.textContent = image.filename;
+      lightboxFilename.style.display = 'block';
+    } else {
+      lightboxFilename.style.display = 'none';
+    }
   }
+  
   lightbox.style.display = 'flex'; // Display the lightbox
   currentIndex = index; // Set the current index
   if (isPrivate) {
