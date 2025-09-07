@@ -403,7 +403,7 @@ footer .copyright {
 
 #lightbox-filename {
   position: absolute;
-  font-size: 14px;
+  font-size: 12px;
   z-index: 1001;
   font-family: 'Oswald', sans-serif;
   background-color: rgba(0, 0, 0, 0.5);
