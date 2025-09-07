@@ -141,6 +141,19 @@ function prevImage() {
 function completeSwipe(direction) {
   const screenWidth = window.innerWidth;
   
+  // Position the next/previous images before starting animation
+  if (direction === 'next') {
+    // Position next image off-screen to the right, make it visible
+    nextImg.style.transform = `translateX(${screenWidth}px)`;
+    nextImg.style.opacity = '1';
+    prevImg.style.opacity = '0';
+  } else {
+    // Position previous image off-screen to the left, make it visible
+    prevImg.style.transform = `translateX(-${screenWidth}px)`;
+    prevImg.style.opacity = '1';
+    nextImg.style.opacity = '0';
+  }
+  
   // Add transition for smooth completion
   lightboxImg.style.transition = 'transform 0.3s ease-out';
   nextImg.style.transition = 'transform 0.3s ease-out';
