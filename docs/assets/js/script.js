@@ -269,6 +269,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const swipeThreshold = 0.3; // 30% of screen width to trigger swipe
 
   function pointerDown(e) {
+    // Don't interfere with button clicks (close button, nav buttons)
+    if (e.target.closest('.close-button') || e.target.closest('.nav-button')) {
+      return;
+    }
+    
     e.preventDefault(); // Prevent default browser actions like image saving
     isPointerDown = true;
     lightbox.style.cursor = 'grabbing';
@@ -289,6 +294,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function pointerMove(e) {
     if (!isPointerDown) return;
+    
+    // Don't interfere with button interactions
+    if (e.target.closest('.close-button') || e.target.closest('.nav-button')) {
+      return;
+    }
+    
     e.preventDefault(); // Prevent default browser actions like image saving
     currentTouchX = e.touches ? e.touches[0].clientX : e.clientX;
     const touchY = e.touches ? e.touches[0].clientY : e.clientY;
