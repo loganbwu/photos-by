@@ -291,33 +291,21 @@ header nav a:hover {
   margin-right: 10px;
 }
 
-#standard-agreement {
+#first-shoot, #standard-agreement, #contact, #album-access, #booking {
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
 }
 
-#first-shoot {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-#standard-agreement .sub-title {
+.sub-title {
     font-size: 1.2em;
     margin-top: 20px;
 }
 
-#standard-agreement .main-text {
+.main-text {
     font-size: 1em;
     line-height: 1.5;
     margin-bottom: 10px;
-}
-
-#contact, #album-access {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
 }
 
 footer .copyright {

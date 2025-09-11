@@ -22,6 +22,7 @@ const PARTIAL_FILES = {
     firstShoot: 'first_shoot_partial.html',
     standardAgreement: 'standard_agreement_partial.html',
     privateGallery: 'albums_partial.html',
+    booking: 'booking_partial.html',
 };
 
 const PAGES = [
@@ -59,6 +60,13 @@ const PAGES = [
         title: 'Albums | Photos by Logan',
         metaDescription: 'Access a private photo album.',
         scripts: ['assets/js/private-gallery.js'] // Page-specific script
+    },
+    {
+        name: 'booking.html',
+        contentKey: 'booking',
+        partial: PARTIAL_FILES.booking,
+        title: 'Booking | Photos by Logan',
+        metaDescription: 'Book a photoshoot session.',
     },
 ];
 
