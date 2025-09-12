@@ -205,15 +205,30 @@ async function buildSite() {
             console.warn(`Partial for page ${page.name} (key: ${page.contentKey}) not found or failed to load. Page might be incomplete.`);
         }
 
-        const pageHtml = baseTemplateContent
+        let pageHtml = baseTemplateContent
             .replace(/<!-- PATH_PREFIX -->/g, page.pathPrefix)
-            .replace(/<!-- HOME_PATH_PREFIX -->/g, page.homePathPrefix)
             .replace('<!-- TITLE_PLACEHOLDER -->', page.title || 'Photos by Logan')
             .replace('<!-- META_DESCRIPTION_PLACEHOLDER -->', page.metaDescription ? `<meta name="description" content="${page.metaDescription}">` : '')
             .replace('<!-- HEADER_PLACEHOLDER -->', partials.header)
             .replace('<!-- FOOTER_PLACEHOLDER -->', partials.footer)
             .replace('<!-- CONTENT_PLACEHOLDER -->', pageSpecificContent)
             .replace('<!-- PAGE_SPECIFIC_SCRIPTS_PLACEHOLDER -->', page.scripts ? page.scripts.map(scriptPath => `<script src="${page.pathPrefix}${scriptPath}" defer></script>`).join('\n') : '');
+
+        // --- Dynamic URL Replacement ---
+        const urlMappings = {
+            'HOME_URL': 'index.html',
+            'FIRST_SHOOT_URL': 'first_shoot/index.html',
+            'STANDARD_AGREEMENT_URL': 'standard_agreement/index.html',
+            'ALBUMS_URL': 'albums/index.html',
+            'BOOKING_URL': 'booking/index.html',
+            'CONTACT_URL': 'contact/index.html',
+        };
+
+        for (const [placeholder, targetPath] of Object.entries(urlMappings)) {
+            const relativePath = path.relative(path.dirname(page.name), path.dirname(targetPath));
+            const finalPath = path.join(relativePath, path.basename(targetPath)).replace('index.html', '');
+            pageHtml = pageHtml.replace(new RegExp(`<!-- ${placeholder} -->`, 'g'), finalPath);
+        }
 
         const outputPath = path.join(BUILD_DIR, page.name);
         await writeFileContent(outputPath, pageHtml);
