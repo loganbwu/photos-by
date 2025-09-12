@@ -29,13 +29,15 @@ const PAGES = [
     {
         name: 'index.html',
         pathPrefix: '',
+        homePathPrefix: '',
         contentKey: 'gallery', // Special key for gallery content
         title: 'Photos by Logan | Melbourne & Shanghai Pole & Aerial Photography',
-        metaDescription: 'Stunning pole dance and aerial arts photography by Logan, based in Melbourne and Shanghai. Specializing in studio photoshoots and event photography/videography.',
+        metaDescription: 'Stunning pole dance and aerial arts photography by Logan, based in Melbourne and Shanghai. Specializing in studio photoshots and event photography/videography.',
     },
     {
         name: 'contact/index.html',
         pathPrefix: '../',
+        homePathPrefix: '../',
         contentKey: 'contact',
         partial: PARTIAL_FILES.contact,
         title: 'Contact Photos by Logan | Pole & Aerial Photographer',
@@ -44,6 +46,7 @@ const PAGES = [
     {
         name: 'first_shoot/index.html',
         pathPrefix: '../',
+        homePathPrefix: '../',
         contentKey: 'firstShoot',
         partial: PARTIAL_FILES.firstShoot,
         title: 'Your First Pole/Aerial Photo Shoot Guide | Photos by Logan',
@@ -52,6 +55,7 @@ const PAGES = [
     {
         name: 'standard_agreement/index.html',
         pathPrefix: '../',
+        homePathPrefix: '../',
         contentKey: 'standardAgreement',
         partial: PARTIAL_FILES.standardAgreement,
         title: 'Photography Agreement | Photos by Logan',
@@ -60,6 +64,7 @@ const PAGES = [
     {
         name: 'albums/index.html',
         pathPrefix: '../',
+        homePathPrefix: '../',
         contentKey: 'privateGallery',
         partial: PARTIAL_FILES.privateGallery,
         title: 'Albums | Photos by Logan',
@@ -69,6 +74,7 @@ const PAGES = [
     {
         name: 'booking/index.html',
         pathPrefix: '../',
+        homePathPrefix: '../',
         contentKey: 'booking',
         partial: PARTIAL_FILES.booking,
         title: 'Booking | Photos by Logan',
@@ -201,6 +207,7 @@ async function buildSite() {
 
         const pageHtml = baseTemplateContent
             .replace(/<!-- PATH_PREFIX -->/g, page.pathPrefix)
+            .replace(/<!-- HOME_PATH_PREFIX -->/g, page.homePathPrefix)
             .replace('<!-- TITLE_PLACEHOLDER -->', page.title || 'Photos by Logan')
             .replace('<!-- META_DESCRIPTION_PLACEHOLDER -->', page.metaDescription ? `<meta name="description" content="${page.metaDescription}">` : '')
             .replace('<!-- HEADER_PLACEHOLDER -->', partials.header)
