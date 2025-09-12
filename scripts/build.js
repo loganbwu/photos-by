@@ -28,38 +28,33 @@ const PARTIAL_FILES = {
 const PAGES = [
     {
         name: 'index.html',
-        pathPrefix: '',
         contentKey: 'gallery', // Special key for gallery content
         title: 'Photos by Logan | Melbourne & Shanghai Pole & Aerial Photography',
         metaDescription: 'Stunning pole dance and aerial arts photography by Logan, based in Melbourne and Shanghai. Specializing in studio photoshoots and event photography/videography.',
     },
     {
-        name: 'contact/index.html',
-        pathPrefix: '../',
+        name: 'contact.html',
         contentKey: 'contact',
         partial: PARTIAL_FILES.contact,
         title: 'Contact Photos by Logan | Pole & Aerial Photographer',
         metaDescription: 'Get in touch with Logan for pole dance and aerial arts photography services in Melbourne and Shanghai. Event coverage and studio shoots available.',
     },
     {
-        name: 'first_shoot/index.html',
-        pathPrefix: '../',
+        name: 'first_shoot.html',
         contentKey: 'firstShoot',
         partial: PARTIAL_FILES.firstShoot,
         title: 'Your First Pole/Aerial Photo Shoot Guide | Photos by Logan',
         metaDescription: 'Preparing for your first pole dance or aerial photo shoot? Get tips and advice from Photos by Logan to make the most of your session.',
     },
     {
-        name: 'standard_agreement/index.html',
-        pathPrefix: '../',
+        name: 'standard_agreement.html',
         contentKey: 'standardAgreement',
         partial: PARTIAL_FILES.standardAgreement,
         title: 'Photography Agreement | Photos by Logan',
         metaDescription: 'Review the standard photography session agreement for photoshoots with Photos by Logan.',
     },
     {
-        name: 'albums/index.html',
-        pathPrefix: '../',
+        name: 'albums.html',
         contentKey: 'privateGallery',
         partial: PARTIAL_FILES.privateGallery,
         title: 'Albums | Photos by Logan',
@@ -67,8 +62,7 @@ const PAGES = [
         scripts: ['assets/js/private-gallery.js'] // Page-specific script
     },
     {
-        name: 'booking/index.html',
-        pathPrefix: '../',
+        name: 'booking.html',
         contentKey: 'booking',
         partial: PARTIAL_FILES.booking,
         title: 'Booking | Photos by Logan',
@@ -92,9 +86,8 @@ async function readFileContent(filePath, isCritical = true) {
 
 async function writeFileContent(filePath, content) {
     try {
-        await fs.mkdir(path.dirname(filePath), { recursive: true });
         await fs.writeFile(filePath, content, 'utf8');
-        console.log(`${filePath} updated successfully!`);
+        console.log(`${path.basename(filePath)} updated successfully!`);
     } catch (err) {
         console.error(`Error writing file ${filePath}:`, err.message);
         throw err;
@@ -200,13 +193,12 @@ async function buildSite() {
         }
 
         const pageHtml = baseTemplateContent
-            .replace(/<!-- PATH_PREFIX -->/g, page.pathPrefix)
             .replace('<!-- TITLE_PLACEHOLDER -->', page.title || 'Photos by Logan')
             .replace('<!-- META_DESCRIPTION_PLACEHOLDER -->', page.metaDescription ? `<meta name="description" content="${page.metaDescription}">` : '')
             .replace('<!-- HEADER_PLACEHOLDER -->', partials.header)
             .replace('<!-- FOOTER_PLACEHOLDER -->', partials.footer)
             .replace('<!-- CONTENT_PLACEHOLDER -->', pageSpecificContent)
-            .replace('<!-- PAGE_SPECIFIC_SCRIPTS_PLACEHOLDER -->', page.scripts ? page.scripts.map(scriptPath => `<script src="${page.pathPrefix}${scriptPath}" defer></script>`).join('\n') : '');
+            .replace('<!-- PAGE_SPECIFIC_SCRIPTS_PLACEHOLDER -->', page.scripts ? page.scripts.map(scriptPath => `<script src="${scriptPath}" defer></script>`).join('\n') : '');
 
         const outputPath = path.join(BUILD_DIR, page.name);
         await writeFileContent(outputPath, pageHtml);
