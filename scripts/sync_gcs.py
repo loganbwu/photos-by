@@ -359,6 +359,23 @@ def main():
                     pbar.update(1)
         else:
             print("\nNo manifests need updating - all are identical to GCS versions.")
+
+        # --- 6. Print Private Gallery URLs ---
+        print("\n--- Private Gallery URLs ---")
+        # Read the CNAME file to get the custom domain
+        cname_path = os.path.join(SCRIPT_DIR, '..', 'docs', 'CNAME')
+        domain = "photosby.loganwu.co.nz"  # Default domain
+        if os.path.exists(cname_path):
+            with open(cname_path, 'r') as f:
+                domain = f.read().strip()
+        
+        for folder_name in client_folders:
+            # URL encode the folder name to handle special characters, although GCS folders are lowercase
+            from urllib.parse import quote
+            encoded_folder = quote(folder_name.lower())
+            gallery_url = f"https://{domain}/albums/?album={encoded_folder}"
+            print(f"  > {folder_name}: {gallery_url}")
+        print("----------------------------")
         
         print("\nAll synchronizations completed successfully.")
         sys.exit(0)

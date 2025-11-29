@@ -291,7 +291,7 @@ header nav a:hover {
   margin-right: 10px;
 }
 
-#first-shoot, #standard-agreement, #contact, #album-access, #booking {
+article {
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
