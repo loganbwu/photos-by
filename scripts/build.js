@@ -23,6 +23,8 @@ const PARTIAL_FILES = {
     standardAgreement: 'standard_agreement_partial.html',
     privateGallery: 'albums_partial.html',
     booking: 'booking_partial.html',
+    carlton: 'carlton_partial.html',
+    fairfield: 'fairfield_partial.html'
 };
 
 const PAGES = [
@@ -80,6 +82,24 @@ const PAGES = [
         title: 'Booking | Photos by Logan',
         metaDescription: 'Book a photoshoot session.',
     },
+    {
+        name: 'carlton/index.html',
+        pathPrefix: '../',
+        homePathPrefix: '../',
+        contentKey: 'carlton',
+        partial: PARTIAL_FILES.carlton,
+        title: 'Carlton showcase | Photos by Logan',
+        metaDescription: 'Physipole Carlton showcase media.',
+    },
+    {
+        name: 'fairfield/index.html',
+        pathPrefix: '../',
+        homePathPrefix: '../',
+        contentKey: 'fairfield',
+        partial: PARTIAL_FILES.fairfield,
+        title: 'Fairfield showcase | Photos by Logan',
+        metaDescription: 'Physipole Fairfield showcase media.',
+    }
 ];
 
 // --- Helper Functions ---
