@@ -449,3 +449,29 @@ input[type="button"]:hover {
 #album-name-form button {
     flex-shrink: 0; /* Prevent button from shrinking */
 }
+
+/* Pricing Table Styles */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    color: var(--paragraph-text-color);
+}
+
+table td, table th {
+    border: 1px solid var(--grey);
+    padding: 10px;
+    text-align: left;
+}
+
+table th {
+    background-color: #333;
+    color: var(--white);
+    font-family: 'Oswald', sans-serif;
+    text-transform: uppercase;
+    font-weight: 400;
+}
+
+table tr:nth-child(even) {
+    background-color: #222;
+}
