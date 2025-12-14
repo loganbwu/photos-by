@@ -24,7 +24,8 @@ const PARTIAL_FILES = {
     privateGallery: 'albums_partial.html',
     booking: 'booking_partial.html',
     carlton: 'carlton_partial.html',
-    fairfield: 'fairfield_partial.html'
+    fairfield: 'fairfield_partial.html',
+    zg: 'zg_partial.html'
 };
 
 const PAGES = [
@@ -99,6 +100,15 @@ const PAGES = [
         partial: PARTIAL_FILES.fairfield,
         title: 'Fairfield showcase | Photos by Logan',
         metaDescription: 'Physipole Fairfield showcase media.',
+    },
+    {
+        name: 'zg/index.html',
+        pathPrefix: '../',
+        homePathPrefix: '../',
+        contentKey: 'zg',
+        partial: PARTIAL_FILES.fairfield,
+        title: 'Zero Gravity showcase | Photos by Logan',
+        metaDescription: 'Zero Gravity showcase media.',
     }
 ];
 
