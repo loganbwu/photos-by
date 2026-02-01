@@ -23,9 +23,7 @@ const PARTIAL_FILES = {
     standardAgreement: 'standard_agreement_partial.html',
     privateGallery: 'albums_partial.html',
     booking: 'booking_partial.html',
-    carlton: 'carlton_partial.html',
-    fairfield: 'fairfield_partial.html',
-    zg: 'zg_partial.html'
+    babyg: 'babyg_partial.html'
 };
 
 const PAGES = [
@@ -84,31 +82,13 @@ const PAGES = [
         metaDescription: 'Book a photoshoot session.',
     },
     {
-        name: 'carlton/index.html',
+        name: 'babyg/index.html',
         pathPrefix: '../',
         homePathPrefix: '../',
-        contentKey: 'carlton',
-        partial: PARTIAL_FILES.carlton,
-        title: 'Carlton showcase | Photos by Logan',
-        metaDescription: 'Physipole Carlton showcase media.',
-    },
-    {
-        name: 'fairfield/index.html',
-        pathPrefix: '../',
-        homePathPrefix: '../',
-        contentKey: 'fairfield',
-        partial: PARTIAL_FILES.fairfield,
-        title: 'Fairfield showcase | Photos by Logan',
-        metaDescription: 'Physipole Fairfield showcase media.',
-    },
-    {
-        name: 'zg/index.html',
-        pathPrefix: '../',
-        homePathPrefix: '../',
-        contentKey: 'zg',
-        partial: PARTIAL_FILES.fairfield,
-        title: 'Zero Gravity showcase | Photos by Logan',
-        metaDescription: 'Zero Gravity showcase media.',
+        contentKey: 'babyg',
+        partial: PARTIAL_FILES.babyg,
+        title: 'Gabby\'s birthday | Photos by Logan',
+        metaDescription: 'Guests and performances from Gabby\'s birthday and cancer remission celebration.',
     }
 ];
 
