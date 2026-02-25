@@ -23,7 +23,8 @@ const PARTIAL_FILES = {
     standardAgreement: 'standard_agreement_partial.html',
     privateGallery: 'albums_partial.html',
     booking: 'booking_partial.html',
-    babyg: 'babyg_partial.html'
+    babyg: 'babyg_partial.html',
+    sirens: 'sirens_partial.html'
 };
 
 const PAGES = [
@@ -89,6 +90,15 @@ const PAGES = [
         partial: PARTIAL_FILES.babyg,
         title: 'Gabby\'s birthday | Photos by Logan',
         metaDescription: 'Guests and performances from Gabby\'s birthday and cancer remission celebration.',
+    },
+    {
+        name: 'sirens/index.html',
+        pathPrefix: '../',
+        homePathPrefix: '../',
+        contentKey: 'sirens',
+        partial: PARTIAL_FILES.sirens,
+        title: 'Sirens Pole Competition | Photos by Logan',
+        metaDescription: 'Sirens pole competition media.',
     }
 ];
 
