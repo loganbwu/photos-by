@@ -608,7 +608,7 @@ table tr:nth-child(even) {
     border: 1px solid #555;
     color: var(--white);
     font-size: 1em;
-    padding: 6px 12px;
+    padding: 6px;
     line-height: 1;
     cursor: pointer;
     flex-shrink: 0;
