@@ -384,6 +384,11 @@ def main():
                     {"images": sorted_filenames, "proofs": proofs},
                     indent=2
                 )
+
+                # Write manifest locally so it can be inspected before/after sync
+                local_manifest_path = os.path.join(LOCAL_STAGING_DIR, folder_name, "manifest.json")
+                with open(local_manifest_path, 'w', encoding='utf-8') as f:
+                    f.write(new_manifest_content)
                 
                 # Check if manifest exists and compare content
                 should_upload = True
