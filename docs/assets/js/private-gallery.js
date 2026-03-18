@@ -16,6 +16,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
+    // Any nav link with an empty href reloads the current URL including ?album=.
+    // Intercept those clicks to navigate to the clean pathname instead.
+    document.querySelectorAll('nav a[href=""]').forEach(function (link) {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            window.location.href = window.location.pathname;
+        });
+    });
+
     // Check for album name in URL query parameters
     const urlParams = new URLSearchParams(window.location.search);
     const albumNameFromUrl = urlParams.get('album');
@@ -54,8 +63,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.base_url && data.images && data.images.length > 0) {
                     albumAccessSection.style.display = 'none';
                     galleryContainer.style.display = ''; // Show gallery container
-                    // Clean the URL so the Albums nav link doesn't re-trigger the album load
-                    history.replaceState(null, '', window.location.pathname);
 
                     // The backend may return the manifest in one of two shapes:
                     // - New backend: { manifest: [...], proofs: [...] }
