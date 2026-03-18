@@ -2,7 +2,6 @@ import os
 import sys
 import json
 import hashlib
-import re
 from google.cloud import storage
 from PIL import Image, IptcImagePlugin
 from io import BytesIO
@@ -142,9 +141,9 @@ def build_proofs_for_folder(image_list):
     """
     Groups images by composition keyword and builds a proofs list.
 
-    Keywords must follow the pattern seq_<name>_<digits>, e.g. seq_paint_01,
-    seq_fire_02. This prefix is intentionally specific to avoid collisions
-    with other tagging conventions (e.g. person names like alice_01).
+    Keywords must start with seq_, e.g. seq_01, seq_paint_01, seq_fire_02.
+    This prefix is intentionally specific to avoid collisions with other
+    tagging conventions (e.g. person names like alice_01).
 
     Within each group, images are already sorted by capture time, so the
     first image is the base exposure and the rest are light-painting overlays.
@@ -156,7 +155,7 @@ def build_proofs_for_folder(image_list):
     for file_info in image_list:
         keywords = file_info.get('keywords', [])
         for kw in keywords:
-            if re.match(r'^seq_[a-z0-9]+_\d+$', kw.lower()):
+            if kw.lower().startswith('seq_'):
                 seq_id = kw.lower()
                 if seq_id not in sequence_groups:
                     sequence_groups[seq_id] = []
