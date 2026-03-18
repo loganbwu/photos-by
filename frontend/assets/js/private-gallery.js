@@ -51,6 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 const data = await response.json();
+                console.log('[proof-debug] raw backend response:', JSON.stringify(data, null, 2));
                 if (data.base_url && data.images && data.images.length > 0) {
                     albumAccessSection.style.display = 'none';
                     galleryContainer.style.display = ''; // Show gallery container
@@ -67,9 +68,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         manifest = manifest.images || [];
                     }
 
+                    console.log('[proof-debug] manifest (normalised):', manifest);
+                    console.log('[proof-debug] proofs:', proofs);
+                    console.log('[proof-debug] initProofViewer available:', typeof window.initProofViewer === 'function');
+
                     populateGallery(data.base_url, data.images, manifest);
                     if (typeof window.initProofViewer === 'function' && proofs.length > 0) {
+                        console.log('[proof-debug] calling initProofViewer');
                         window.initProofViewer(proofs, data.base_url);
+                    } else {
+                        console.log('[proof-debug] proof viewer not initialised — proofs.length:', proofs.length, ', initProofViewer:', typeof window.initProofViewer);
                     }
                 } else {
                     displayError('No images found for the provided album name, or the gallery is empty.');
