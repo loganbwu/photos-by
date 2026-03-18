@@ -97,6 +97,7 @@
                         '<button class="proof-viewer-close" id="proof-viewer-close" aria-label="Close viewer">&times; Exit</button>' +
                     '</div>' +
                     '<p class="proof-instructions">Hover over an overlay to preview it, or click to keep it enabled. Experiment with different combinations to find your favourite composite.</p>' +
+                    '<p class="proof-instructions">Note: this is a indicative preview only. The base image and overlays will be refined in post-processing for the final edit.</p>' +
                     '<div id="proof-overlays-list" class="proof-overlays-list"></div>' +
                 '</div>' +
             '</div>';
