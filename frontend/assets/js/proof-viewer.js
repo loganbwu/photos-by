@@ -96,6 +96,7 @@
                         '<h2 id="proof-viewer-title">Composite Proof</h2>' +
                         '<button class="proof-viewer-close" id="proof-viewer-close" aria-label="Close viewer">&times; Exit</button>' +
                     '</div>' +
+                    '<p class="proof-instructions">Hover over an overlay to preview it, or click to keep it enabled. Experiment with different combinations to find your favourite composite.</p>' +
                     '<div id="proof-overlays-list" class="proof-overlays-list"></div>' +
                 '</div>' +
             '</div>';

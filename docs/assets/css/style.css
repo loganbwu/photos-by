@@ -647,6 +647,13 @@ table tr:nth-child(even) {
     gap: 10px;
 }
 
+.proof-instructions {
+    font-size: 0.85em;
+    color: var(--grey);
+    margin: 0;
+    line-height: 1.5;
+}
+
 .proof-base-name {
     font-size: 0.85em;
     color: var(--paragraph-text-color);
