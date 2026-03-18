@@ -425,6 +425,7 @@ def main():
             with tqdm(total=len(manifests_to_upload), desc="Updating manifests", unit="manifest") as pbar:
                 for manifest_info in manifests_to_upload:
                     manifest_blob = bucket.blob(manifest_info['path'])
+                    manifest_blob.cache_control = 'no-store'
                     manifest_blob.upload_from_string(
                         manifest_info['content'],
                         content_type='application/json'
