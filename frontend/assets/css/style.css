@@ -602,20 +602,21 @@ table tr:nth-child(even) {
 
 .proof-viewer-close {
     background: none;
-    border: none;
+    border: 1px solid #555;
     color: var(--white);
-    font-size: 1.5em;
-    padding: 0;
+    font-size: 1em;
+    padding: 6px 12px;
     line-height: 1;
     cursor: pointer;
     flex-shrink: 0;
     text-transform: none;
+    font-family: Helvetica, sans-serif;
 }
 
 .proof-viewer-close:hover {
     color: var(--pale-blue);
     background: none;
-    border: none;
+    border-color: var(--pale-blue);
 }
 
 .proof-control-label {

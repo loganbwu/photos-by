@@ -94,7 +94,7 @@
                 '<div class="proof-viewer-controls">' +
                     '<div class="proof-viewer-header">' +
                         '<h2 id="proof-viewer-title">Composite Proof</h2>' +
-                        '<button class="proof-viewer-close" id="proof-viewer-close" aria-label="Close viewer">&times;</button>' +
+                        '<button class="proof-viewer-close" id="proof-viewer-close" aria-label="Close viewer">&times; Exit</button>' +
                     '</div>' +
                     '<div id="proof-overlays-list" class="proof-overlays-list"></div>' +
                 '</div>' +
