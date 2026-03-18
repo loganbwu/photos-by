@@ -6,6 +6,9 @@
     var baseImage = null;
     var overlayImages = [];
     var overlaySettings = [];
+    var animating = false;
+    var lastTimestamp = null;
+    var TRANSITION_MS = 50;
 
 
     function initProofViewer(proofs, galleryBaseUrl) {
@@ -112,7 +115,7 @@
     function openProofViewer(proof) {
         currentProof = proof;
         overlayImages = [];
-        overlaySettings = proof.overlays.map(function () { return { enabled: false, hovering: false }; });
+        overlaySettings = proof.overlays.map(function () { return { enabled: false, hovering: false, currentAlpha: 0, targetAlpha: 0 }; });
 
         document.getElementById('proof-viewer-title').textContent = proof.id.replace(/_/g, ' ');
 
@@ -155,16 +158,16 @@
             (function (idx) {
                 btn.addEventListener('mouseenter', function () {
                     overlaySettings[idx].hovering = true;
-                    redraw();
+                    setTargetAlpha(idx);
                 });
                 btn.addEventListener('mouseleave', function () {
                     overlaySettings[idx].hovering = false;
-                    redraw();
+                    setTargetAlpha(idx);
                 });
                 btn.addEventListener('click', function () {
                     overlaySettings[idx].enabled = !overlaySettings[idx].enabled;
                     btn.classList.toggle('active', overlaySettings[idx].enabled);
-                    redraw();
+                    setTargetAlpha(idx);
                 });
             }(i));
             list.appendChild(btn);
@@ -213,6 +216,45 @@
         });
     }
 
+    function setTargetAlpha(idx) {
+        overlaySettings[idx].targetAlpha = (overlaySettings[idx].enabled || overlaySettings[idx].hovering) ? 1.0 : 0.0;
+        startAnimation();
+    }
+
+    function startAnimation() {
+        if (!animating) {
+            animating = true;
+            lastTimestamp = null;
+            requestAnimationFrame(animationStep);
+        }
+    }
+
+    function animationStep(timestamp) {
+        var dt = lastTimestamp ? timestamp - lastTimestamp : 16;
+        lastTimestamp = timestamp;
+
+        var stillAnimating = false;
+        overlaySettings.forEach(function (settings) {
+            var diff = settings.targetAlpha - settings.currentAlpha;
+            if (Math.abs(diff) > 0.001) {
+                settings.currentAlpha += (diff > 0 ? 1 : -1) * dt / TRANSITION_MS;
+                settings.currentAlpha = Math.max(0, Math.min(1, settings.currentAlpha));
+                stillAnimating = true;
+            } else {
+                settings.currentAlpha = settings.targetAlpha;
+            }
+        });
+
+        redraw();
+
+        if (stillAnimating) {
+            requestAnimationFrame(animationStep);
+        } else {
+            animating = false;
+            lastTimestamp = null;
+        }
+    }
+
     function redraw() {
         if (!baseImage || !baseImage.complete) return;
 
@@ -227,9 +269,9 @@
         ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
 
         overlaySettings.forEach(function (settings, i) {
-            if (!settings.enabled && !settings.hovering) return;
+            if (settings.currentAlpha <= 0) return;
             if (!overlayImages[i] || !overlayImages[i].complete) return;
-            ctx.globalAlpha = 1.0;
+            ctx.globalAlpha = settings.currentAlpha;
             ctx.globalCompositeOperation = blendMode;
             ctx.drawImage(overlayImages[i], 0, 0, canvas.width, canvas.height);
         });
