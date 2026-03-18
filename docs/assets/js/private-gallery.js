@@ -54,6 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.base_url && data.images && data.images.length > 0) {
                     albumAccessSection.style.display = 'none';
                     galleryContainer.style.display = ''; // Show gallery container
+                    // Clean the URL so the Albums nav link doesn't re-trigger the album load
+                    history.replaceState(null, '', window.location.pathname);
 
                     // The backend may return the manifest in one of two shapes:
                     // - New backend: { manifest: [...], proofs: [...] }
