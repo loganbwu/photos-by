@@ -12,7 +12,6 @@ dependencies = [
     "pillow>=11.2.1",
     "tqdm>=4.67.1",
 ]
-readme = "README.md"
 requires-python = ">= 3.12"
 
 [build-system]
