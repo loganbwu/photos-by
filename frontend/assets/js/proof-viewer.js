@@ -71,9 +71,9 @@
 
         section.appendChild(cards);
 
-        var galleryContainer = document.getElementById('image-gallery-container');
-        if (galleryContainer && galleryContainer.parentNode) {
-            galleryContainer.parentNode.insertBefore(section, galleryContainer.nextSibling);
+        var albumViewer = document.getElementById('album-viewer');
+        if (albumViewer && albumViewer.parentNode) {
+            albumViewer.parentNode.insertBefore(section, albumViewer.nextSibling);
         }
     }
 
