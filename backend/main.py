@@ -131,8 +131,21 @@ def private_gallery_backend(request):
     # Construct the public base URL for the images
     base_image_url = f"https://storage.googleapis.com/{GCS_BUCKET_NAME}/{album_name}/"
 
+    # Support both old array format and new object format for manifest.
+    # Old format: manifest is a plain list of filenames.
+    # New format: manifest is {"images": [...], "proofs": [...]}.
+    images_order = None
+    proofs = []
+    if manifest is not None:
+        if isinstance(manifest, list):
+            images_order = manifest
+        elif isinstance(manifest, dict):
+            images_order = manifest.get('images')
+            proofs = manifest.get('proofs', [])
+
     return jsonify({
         "base_url": base_image_url,
         "images": image_filenames,
-        "manifest": manifest  # Pass the manifest to the frontend
+        "manifest": images_order,  # Always an array or None, for backward compatibility
+        "proofs": proofs            # Empty list for old-format albums
     }), 200, headers

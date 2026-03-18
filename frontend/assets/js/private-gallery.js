@@ -56,6 +56,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     galleryContainer.style.display = ''; // Show gallery container
                     // Pass the manifest to the gallery population function
                     populateGallery(data.base_url, data.images, data.manifest);
+                    // Initialise proof viewer if the manifest includes sequence proofs
+                    if (typeof window.initProofViewer === 'function' && data.proofs && data.proofs.length > 0) {
+                        window.initProofViewer(data.proofs, data.base_url);
+                    }
                 } else {
                     displayError('No images found for the provided album name, or the gallery is empty.');
                 }

@@ -2,8 +2,9 @@ import os
 import sys
 import json
 import hashlib
+import re
 from google.cloud import storage
-from PIL import Image
+from PIL import Image, IptcImagePlugin
 from io import BytesIO
 import datetime
 from tqdm import tqdm
@@ -112,6 +113,65 @@ def get_exif_date(image_bytes):
         pass
     return None
 
+def get_keywords(image_bytes):
+    """
+    Extracts IPTC keywords from image bytes.
+    Returns a list of keyword strings, or an empty list if none are found.
+    Lightroom writes keywords to IPTC dataset (2, 25).
+    """
+    try:
+        img = Image.open(BytesIO(image_bytes))
+        iptc = IptcImagePlugin.getiptcinfo(img)
+        if not iptc:
+            return []
+        raw = iptc.get((2, 25), [])
+        if isinstance(raw, bytes):
+            raw = [raw]
+        keywords = []
+        for kw in raw:
+            if isinstance(kw, bytes):
+                keywords.append(kw.decode('utf-8', errors='replace').strip())
+            elif isinstance(kw, str):
+                keywords.append(kw.strip())
+        return [k for k in keywords if k]
+    except Exception:
+        return []
+
+
+def build_proofs_for_folder(image_list):
+    """
+    Groups images by sequence keyword (e.g. sequence_01, sequence_02) and
+    builds a proofs list. Within each group, images are already sorted by
+    capture time, so the first image is the base exposure and the rest are
+    light-painting overlays.
+
+    Returns a list of proof dicts, or an empty list if no sequence keywords
+    are found. Albums without any sequence-tagged images are unaffected.
+    """
+    sequence_groups = {}
+    for file_info in image_list:
+        keywords = file_info.get('keywords', [])
+        for kw in keywords:
+            if re.match(r'^sequence_\d+$', kw.lower()):
+                seq_id = kw.lower()
+                if seq_id not in sequence_groups:
+                    sequence_groups[seq_id] = []
+                sequence_groups[seq_id].append(file_info)
+                break  # Use only the first matching sequence keyword per image
+
+    proofs = []
+    for seq_id in sorted(sequence_groups.keys()):
+        group = sequence_groups[seq_id]
+        if not group:
+            continue
+        proofs.append({
+            'id': seq_id,
+            'base': group[0]['name'],
+            'overlays': [img['name'] for img in group[1:]]
+        })
+    return proofs
+
+
 def main():
     """Main function to discover all images, process them with a global progress bar, and sync."""
     print("Starting GCS synchronization process...")
@@ -175,8 +235,9 @@ def main():
             
             exif_date = get_exif_date(image_bytes)
             mod_time = datetime.datetime.fromtimestamp(os.path.getmtime(file_info["local_path"]))
-            
+
             file_info["timestamp"] = exif_date or mod_time
+            file_info["keywords"] = get_keywords(image_bytes)
             images_by_folder[file_info["folder"]].append(file_info)
             pbar.update(1)
 
@@ -308,12 +369,17 @@ def main():
                 gcs_prefix = f"{folder_name.lower()}/"
                 manifest_path = f"{gcs_prefix}manifest.json"
                 
-                # Generate the new manifest content
-                if not image_list:
-                    new_manifest_content = json.dumps([], indent=2)
-                else:
-                    sorted_filenames = [img["name"] for img in image_list]
-                    new_manifest_content = json.dumps(sorted_filenames, indent=2)
+                # Generate the new manifest content.
+                # Format: {"images": [...], "proofs": [...]}
+                # The "proofs" key is only populated when sequence keywords are present;
+                # albums without sequence keywords get an empty list and behave identically
+                # to the old plain-array format on the frontend.
+                sorted_filenames = [img["name"] for img in image_list] if image_list else []
+                proofs = build_proofs_for_folder(image_list) if image_list else []
+                new_manifest_content = json.dumps(
+                    {"images": sorted_filenames, "proofs": proofs},
+                    indent=2
+                )
                 
                 # Check if manifest exists and compare content
                 should_upload = True

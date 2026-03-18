@@ -40,6 +40,7 @@
 <script src="<!-- PATH_PREFIX -->assets/js/script.js?v=1.1"></script>
     <script src="<!-- PATH_PREFIX -->assets/js/gallery.js?v=1.1"></script>
     <script src="<!-- PATH_PREFIX -->assets/js/private-gallery.js?v=1.1"></script>
+    <script src="<!-- PATH_PREFIX -->assets/js/proof-viewer.js?v=1.0"></script>
     
 </body>
 </html>
