@@ -611,6 +611,9 @@ table tr:nth-child(even) {
     flex-shrink: 0;
     text-transform: none;
     font-family: Helvetica, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .proof-viewer-close:hover {
