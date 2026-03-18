@@ -8,7 +8,7 @@
     var overlaySettings = [];
     var animFrameId = null;
     var lastTimestamp = null;
-    var TRANSITION_MS = 500;
+    var TRANSITION_MS = 100;
 
 
     function initProofViewer(proofs, galleryBaseUrl) {
