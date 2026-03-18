@@ -54,11 +54,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (data.base_url && data.images && data.images.length > 0) {
                     albumAccessSection.style.display = 'none';
                     galleryContainer.style.display = ''; // Show gallery container
-                    // Pass the manifest to the gallery population function
-                    populateGallery(data.base_url, data.images, data.manifest);
-                    // Initialise proof viewer if the manifest includes sequence proofs
-                    if (typeof window.initProofViewer === 'function' && data.proofs && data.proofs.length > 0) {
-                        window.initProofViewer(data.proofs, data.base_url);
+
+                    // The backend may return the manifest in one of two shapes:
+                    // - New backend: { manifest: [...], proofs: [...] }
+                    // - Old backend (not yet redeployed) with new-format GCS manifest:
+                    //   { manifest: { images: [...], proofs: [...] } }
+                    // Normalise both so the rest of the code is consistent.
+                    let manifest = data.manifest;
+                    let proofs = data.proofs || [];
+                    if (manifest && !Array.isArray(manifest) && typeof manifest === 'object') {
+                        proofs = manifest.proofs || [];
+                        manifest = manifest.images || [];
+                    }
+
+                    populateGallery(data.base_url, data.images, manifest);
+                    if (typeof window.initProofViewer === 'function' && proofs.length > 0) {
+                        window.initProofViewer(proofs, data.base_url);
                     }
                 } else {
                     displayError('No images found for the provided album name, or the gallery is empty.');
