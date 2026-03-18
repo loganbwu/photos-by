@@ -493,7 +493,7 @@ table tr:nth-child(even) {
 }
 
 .proof-card {
-    width: 200px;
+    width: calc((100% - 2 * 12px) / 3);
     background-color: #1a1a1a;
     cursor: pointer;
     border: 1px solid #333;
@@ -699,10 +699,6 @@ table tr:nth-child(even) {
     .proof-viewer-canvas-wrap {
         flex: 1;
         min-height: 0;
-    }
-
-    .proof-card {
-        width: 160px;
     }
 
     .proof-card img {
