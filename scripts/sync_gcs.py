@@ -152,7 +152,7 @@ def build_proofs_for_folder(image_list):
     for file_info in image_list:
         keywords = file_info.get('keywords', [])
         for kw in keywords:
-            if re.match(r'^sequence_\d+$', kw.lower()):
+            if re.match(r'^[a-z0-9]+_\d+$', kw.lower()):
                 seq_id = kw.lower()
                 if seq_id not in sequence_groups:
                     sequence_groups[seq_id] = []
