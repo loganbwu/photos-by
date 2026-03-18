@@ -140,19 +140,23 @@ def get_keywords(image_bytes):
 
 def build_proofs_for_folder(image_list):
     """
-    Groups images by sequence keyword (e.g. sequence_01, sequence_02) and
-    builds a proofs list. Within each group, images are already sorted by
-    capture time, so the first image is the base exposure and the rest are
-    light-painting overlays.
+    Groups images by composition keyword and builds a proofs list.
 
-    Returns a list of proof dicts, or an empty list if no sequence keywords
-    are found. Albums without any sequence-tagged images are unaffected.
+    Keywords must follow the pattern seq_<name>_<digits>, e.g. seq_paint_01,
+    seq_fire_02. This prefix is intentionally specific to avoid collisions
+    with other tagging conventions (e.g. person names like alice_01).
+
+    Within each group, images are already sorted by capture time, so the
+    first image is the base exposure and the rest are light-painting overlays.
+
+    Returns a list of proof dicts, or an empty list if no matching keywords
+    are found. Albums without seq_-tagged images are unaffected.
     """
     sequence_groups = {}
     for file_info in image_list:
         keywords = file_info.get('keywords', [])
         for kw in keywords:
-            if re.match(r'^[a-z0-9]+_\d+$', kw.lower()):
+            if re.match(r'^seq_[a-z0-9]+_\d+$', kw.lower()):
                 seq_id = kw.lower()
                 if seq_id not in sequence_groups:
                     sequence_groups[seq_id] = []
