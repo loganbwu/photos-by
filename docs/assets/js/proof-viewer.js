@@ -49,7 +49,6 @@
             var img = document.createElement('img');
             img.src = baseUrl + proof.base;
             img.alt = proof.id;
-            img.crossOrigin = 'anonymous';
 
             var info = document.createElement('div');
             info.className = 'proof-card-info';
@@ -220,7 +219,6 @@
         var loaded = 0;
 
         imgs.forEach(function (img, idx) {
-            img.crossOrigin = 'anonymous';
             img.onload = function () {
                 loaded++;
                 if (idx === 0) {
