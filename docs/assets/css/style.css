@@ -642,43 +642,38 @@ table tr:nth-child(even) {
     gap: 10px;
 }
 
-.proof-overlay-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.proof-overlay-row input[type="checkbox"] {
-    flex-shrink: 0;
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-    accent-color: var(--pale-blue);
-}
-
-.proof-overlay-label {
-    flex: 1;
-    font-size: 0.8em;
+.proof-base-name {
+    font-size: 0.85em;
     color: var(--paragraph-text-color);
+    margin: 0;
+    word-break: break-all;
+}
+
+.proof-overlay-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font-size: 0.85em;
+    font-family: Helvetica, sans-serif;
+    text-transform: none;
+    padding: 6px 10px;
+    background-color: #333;
+    color: var(--grey);
+    border: 1px solid #444;
+    cursor: pointer;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    cursor: pointer;
 }
 
-.proof-opacity-slider {
-    width: 100%;
-    accent-color: var(--pale-blue);
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
+.proof-overlay-btn.active {
+    background-color: var(--pale-blue);
+    color: var(--black);
+    border-color: var(--pale-blue);
 }
 
-.proof-download-btn {
-    margin-top: auto;
-    width: 100%;
+.proof-overlay-btn:hover {
+    border-color: var(--white);
 }
 
 @media (max-width: 768px) {

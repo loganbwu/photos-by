@@ -110,7 +110,7 @@
     function openProofViewer(proof) {
         currentProof = proof;
         overlayImages = [];
-        overlaySettings = proof.overlays.map(function () { return { enabled: true, opacity: 1.0 }; });
+        overlaySettings = proof.overlays.map(function () { return { enabled: true }; });
 
         document.getElementById('proof-viewer-title').textContent = proof.id.replace(/_/g, ' ');
 
@@ -126,59 +126,38 @@
         var list = document.getElementById('proof-overlays-list');
         list.innerHTML = '';
 
+        var baseLabel = document.createElement('p');
+        baseLabel.className = 'proof-control-label';
+        baseLabel.textContent = 'Base';
+        list.appendChild(baseLabel);
+
+        var baseName = document.createElement('p');
+        baseName.className = 'proof-base-name';
+        baseName.textContent = proof.base;
+        list.appendChild(baseName);
+
         if (proof.overlays.length === 0) {
-            var empty = document.createElement('p');
-            empty.style.color = 'var(--grey)';
-            empty.textContent = 'No overlays in this sequence.';
-            list.appendChild(empty);
             return;
         }
 
-        var heading = document.createElement('p');
-        heading.className = 'proof-control-label';
-        heading.textContent = 'Overlays';
-        list.appendChild(heading);
+        var overlayLabel = document.createElement('p');
+        overlayLabel.className = 'proof-control-label';
+        overlayLabel.textContent = 'Overlays';
+        list.appendChild(overlayLabel);
 
         proof.overlays.forEach(function (name, i) {
-            var row = document.createElement('div');
-            row.className = 'proof-overlay-row';
-
-            var checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.id = 'overlay-toggle-' + i;
-            checkbox.checked = true;
+            var btn = document.createElement('button');
+            btn.className = 'proof-overlay-btn active';
+            btn.textContent = name;
+            btn.title = name;
             (function (idx) {
-                checkbox.addEventListener('change', function () {
-                    overlaySettings[idx].enabled = checkbox.checked;
+                btn.addEventListener('click', function () {
+                    overlaySettings[idx].enabled = !overlaySettings[idx].enabled;
+                    btn.classList.toggle('active', overlaySettings[idx].enabled);
                     redraw();
                 });
             }(i));
-
-            var label = document.createElement('label');
-            label.htmlFor = 'overlay-toggle-' + i;
-            label.className = 'proof-overlay-label';
-            label.textContent = name;
-            label.title = name;
-
-            var slider = document.createElement('input');
-            slider.type = 'range';
-            slider.min = '0';
-            slider.max = '1';
-            slider.step = '0.05';
-            slider.value = '1';
-            slider.className = 'proof-opacity-slider';
-            slider.setAttribute('aria-label', 'Opacity for ' + name);
-            (function (idx) {
-                slider.addEventListener('input', function () {
-                    overlaySettings[idx].opacity = parseFloat(slider.value);
-                    redraw();
-                });
-            }(i));
-
-            row.appendChild(checkbox);
-            row.appendChild(label);
-            row.appendChild(slider);
-            list.appendChild(row);
+            list.appendChild(btn);
         });
     }
 
@@ -240,7 +219,7 @@
         overlaySettings.forEach(function (settings, i) {
             if (!settings.enabled) return;
             if (!overlayImages[i] || !overlayImages[i].complete) return;
-            ctx.globalAlpha = settings.opacity;
+            ctx.globalAlpha = 1.0;
             ctx.globalCompositeOperation = blendMode;
             ctx.drawImage(overlayImages[i], 0, 0, canvas.width, canvas.height);
         });
