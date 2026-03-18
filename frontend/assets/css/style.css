@@ -612,8 +612,8 @@ table tr:nth-child(even) {
     line-height: 1;
     cursor: pointer;
     flex-shrink: 0;
-    text-transform: none;
-    font-family: Helvetica, sans-serif;
+    text-transform: uppercase;
+    font-family: 'Oswald', sans-serif;
     display: flex;
     align-items: center;
     gap: 4px;
