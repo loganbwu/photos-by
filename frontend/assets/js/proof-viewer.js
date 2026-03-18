@@ -7,11 +7,6 @@
     var overlayImages = [];
     var overlaySettings = [];
 
-    var BLEND_MODES = [
-        'screen', 'multiply', 'overlay', 'lighten', 'darken',
-        'color-dodge', 'color-burn', 'hard-light', 'soft-light',
-        'difference', 'exclusion'
-    ];
 
     function initProofViewer(proofs, galleryBaseUrl) {
         if (!proofs || proofs.length === 0) return;
@@ -91,27 +86,17 @@
         modal.setAttribute('aria-modal', 'true');
         modal.setAttribute('aria-label', 'Composite proof viewer');
 
-        var blendOptions = BLEND_MODES.map(function (m) {
-            return '<option value="' + m + '"' + (m === 'screen' ? ' selected' : '') + '>' + m + '</option>';
-        }).join('');
-
         modal.innerHTML =
             '<div class="proof-viewer-content">' +
                 '<div class="proof-viewer-canvas-wrap">' +
                     '<canvas id="proof-canvas"></canvas>' +
-                    '<p class="proof-cors-note" id="proof-cors-note" style="display:none;">' +
-                        'Download unavailable: the storage bucket needs CORS headers configured.' +
-                    '</p>' +
                 '</div>' +
                 '<div class="proof-viewer-controls">' +
                     '<div class="proof-viewer-header">' +
                         '<h2 id="proof-viewer-title">Composite Proof</h2>' +
                         '<button class="proof-viewer-close" id="proof-viewer-close" aria-label="Close viewer">&times;</button>' +
                     '</div>' +
-                    '<label class="proof-control-label" for="proof-blend-mode">Blend mode</label>' +
-                    '<select id="proof-blend-mode" class="proof-select">' + blendOptions + '</select>' +
                     '<div id="proof-overlays-list" class="proof-overlays-list"></div>' +
-                    '<button id="proof-download-btn" class="proof-download-btn">Download PNG</button>' +
                 '</div>' +
             '</div>';
 
@@ -120,8 +105,6 @@
         document.getElementById('proof-viewer-close').addEventListener('click', closeModal);
         modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
-        document.getElementById('proof-blend-mode').addEventListener('change', redraw);
-        document.getElementById('proof-download-btn').addEventListener('click', downloadCanvas);
     }
 
     function openProofViewer(proof) {
@@ -130,8 +113,6 @@
         overlaySettings = proof.overlays.map(function () { return { enabled: true, opacity: 1.0 }; });
 
         document.getElementById('proof-viewer-title').textContent = proof.id.replace(/_/g, ' ');
-        document.getElementById('proof-cors-note').style.display = 'none';
-        document.getElementById('proof-blend-mode').value = 'screen';
 
         var modal = document.getElementById('proof-viewer-modal');
         modal.style.display = 'flex';
@@ -248,7 +229,7 @@
 
         var canvas = document.getElementById('proof-canvas');
         var ctx = canvas.getContext('2d');
-        var blendMode = document.getElementById('proof-blend-mode').value;
+        var blendMode = 'screen';
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -266,22 +247,6 @@
 
         ctx.globalAlpha = 1.0;
         ctx.globalCompositeOperation = 'source-over';
-    }
-
-    function downloadCanvas() {
-        var canvas = document.getElementById('proof-canvas');
-        try {
-            var dataUrl = canvas.toDataURL('image/png');
-            var a = document.createElement('a');
-            a.href = dataUrl;
-            a.download = (currentProof ? currentProof.id : 'proof') + '.png';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        } catch (e) {
-            console.error('Canvas export failed (likely CORS):', e);
-            document.getElementById('proof-cors-note').style.display = 'block';
-        }
     }
 
     function closeModal() {

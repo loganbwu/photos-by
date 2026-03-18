@@ -67,9 +67,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         manifest = manifest.images || [];
                     }
 
-                    populateGallery(data.base_url, data.images, manifest);
                     if (typeof window.initProofViewer === 'function' && proofs.length > 0) {
+                        // Proof-only album: show the compositor, not the individual images
                         window.initProofViewer(proofs, data.base_url);
+                    } else {
+                        populateGallery(data.base_url, data.images, manifest);
                     }
                 } else {
                     displayError('No images found for the provided album name, or the gallery is empty.');
