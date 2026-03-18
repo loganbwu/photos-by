@@ -6,9 +6,9 @@
     var baseImage = null;
     var overlayImages = [];
     var overlaySettings = [];
-    var animating = false;
+    var animFrameId = null;
     var lastTimestamp = null;
-    var TRANSITION_MS = 50;
+    var TRANSITION_MS = 500;
 
 
     function initProofViewer(proofs, galleryBaseUrl) {
@@ -218,15 +218,9 @@
 
     function setTargetAlpha(idx) {
         overlaySettings[idx].targetAlpha = (overlaySettings[idx].enabled || overlaySettings[idx].hovering) ? 1.0 : 0.0;
-        startAnimation();
-    }
-
-    function startAnimation() {
-        if (!animating) {
-            animating = true;
-            lastTimestamp = null;
-            requestAnimationFrame(animationStep);
-        }
+        if (animFrameId !== null) cancelAnimationFrame(animFrameId);
+        lastTimestamp = null;
+        animFrameId = requestAnimationFrame(animationStep);
     }
 
     function animationStep(timestamp) {
@@ -248,9 +242,9 @@
         redraw();
 
         if (stillAnimating) {
-            requestAnimationFrame(animationStep);
+            animFrameId = requestAnimationFrame(animationStep);
         } else {
-            animating = false;
+            animFrameId = null;
             lastTimestamp = null;
         }
     }
