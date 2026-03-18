@@ -657,9 +657,9 @@ table tr:nth-child(even) {
     font-family: Helvetica, sans-serif;
     text-transform: none;
     padding: 6px 10px;
-    background-color: #333;
+    background-color: transparent;
     color: var(--grey);
-    border: 1px solid #444;
+    border: 1px solid #555;
     cursor: pointer;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -670,10 +670,6 @@ table tr:nth-child(even) {
     background-color: var(--pale-blue);
     color: var(--black);
     border-color: var(--pale-blue);
-}
-
-.proof-overlay-btn:hover {
-    border-color: var(--white);
 }
 
 @media (max-width: 768px) {

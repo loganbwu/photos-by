@@ -110,7 +110,7 @@
     function openProofViewer(proof) {
         currentProof = proof;
         overlayImages = [];
-        overlaySettings = proof.overlays.map(function () { return { enabled: true }; });
+        overlaySettings = proof.overlays.map(function () { return { enabled: false, hovering: false }; });
 
         document.getElementById('proof-viewer-title').textContent = proof.id.replace(/_/g, ' ');
 
@@ -147,10 +147,18 @@
 
         proof.overlays.forEach(function (name, i) {
             var btn = document.createElement('button');
-            btn.className = 'proof-overlay-btn active';
+            btn.className = 'proof-overlay-btn';
             btn.textContent = name;
             btn.title = name;
             (function (idx) {
+                btn.addEventListener('mouseenter', function () {
+                    overlaySettings[idx].hovering = true;
+                    redraw();
+                });
+                btn.addEventListener('mouseleave', function () {
+                    overlaySettings[idx].hovering = false;
+                    redraw();
+                });
                 btn.addEventListener('click', function () {
                     overlaySettings[idx].enabled = !overlaySettings[idx].enabled;
                     btn.classList.toggle('active', overlaySettings[idx].enabled);
@@ -217,7 +225,7 @@
         ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
 
         overlaySettings.forEach(function (settings, i) {
-            if (!settings.enabled) return;
+            if (!settings.enabled && !settings.hovering) return;
             if (!overlayImages[i] || !overlayImages[i].complete) return;
             ctx.globalAlpha = 1.0;
             ctx.globalCompositeOperation = blendMode;
