@@ -156,13 +156,13 @@
             btn.textContent = name;
             btn.title = name;
             (function (idx) {
-                btn.addEventListener('pointerenter', function (e) {
-                    if (e.pointerType !== 'mouse') return;
+                btn.addEventListener('pointerenter', function () {
+                    if (window.matchMedia('(hover: none)').matches) return;
                     overlaySettings[idx].hovering = true;
                     setTargetAlpha(idx);
                 });
-                btn.addEventListener('pointerleave', function (e) {
-                    if (e.pointerType !== 'mouse') return;
+                btn.addEventListener('pointerleave', function () {
+                    if (window.matchMedia('(hover: none)').matches) return;
                     overlaySettings[idx].hovering = false;
                     setTargetAlpha(idx);
                 });
