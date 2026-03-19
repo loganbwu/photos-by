@@ -156,17 +156,16 @@
             btn.textContent = name;
             btn.title = name;
             (function (idx) {
-                btn.addEventListener('mouseenter', function () {
+                btn.addEventListener('pointerenter', function (e) {
+                    if (e.pointerType !== 'mouse') return;
                     overlaySettings[idx].hovering = true;
                     setTargetAlpha(idx);
                 });
-                btn.addEventListener('mouseleave', function () {
+                btn.addEventListener('pointerleave', function (e) {
+                    if (e.pointerType !== 'mouse') return;
                     overlaySettings[idx].hovering = false;
                     setTargetAlpha(idx);
                 });
-                btn.addEventListener('touchstart', function () {
-                    overlaySettings[idx].hovering = false;
-                }, { passive: true });
                 btn.addEventListener('click', function () {
                     overlaySettings[idx].enabled = !overlaySettings[idx].enabled;
                     btn.classList.toggle('active', overlaySettings[idx].enabled);
