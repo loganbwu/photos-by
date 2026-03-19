@@ -164,6 +164,9 @@
                     overlaySettings[idx].hovering = false;
                     setTargetAlpha(idx);
                 });
+                btn.addEventListener('touchstart', function () {
+                    overlaySettings[idx].hovering = false;
+                }, { passive: true });
                 btn.addEventListener('click', function () {
                     overlaySettings[idx].enabled = !overlaySettings[idx].enabled;
                     btn.classList.toggle('active', overlaySettings[idx].enabled);
