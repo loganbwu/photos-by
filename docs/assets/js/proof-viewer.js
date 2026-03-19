@@ -31,7 +31,7 @@
 
         var p = document.createElement('p');
         p.className = 'gallery-instructions';
-        p.textContent = 'Select a sequence to composite exposures in the browser.';
+        p.textContent = 'Select a sequence to composite exposures in the browser. For the best experience, use a desktop browser.';
         section.appendChild(p);
 
         var cards = document.createElement('div');
