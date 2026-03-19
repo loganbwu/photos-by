@@ -421,12 +421,14 @@ input[type="button"] {
     transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
 }
 
-button:hover,
-input[type="submit"]:hover,
-input[type="button"]:hover {
-    background-color: var(--white);
-    border-color: var(--white);
-    color: var(--black);
+@media (hover: hover) {
+    button:hover,
+    input[type="submit"]:hover,
+    input[type="button"]:hover {
+        background-color: var(--white);
+        border-color: var(--white);
+        color: var(--black);
+    }
 }
 
 /* Form Styles */
