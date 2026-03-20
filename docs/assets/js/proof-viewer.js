@@ -97,7 +97,7 @@
                 '<div class="proof-viewer-controls">' +
                     '<div class="proof-viewer-header">' +
                         '<h2 id="proof-viewer-title">Composite Proof</h2>' +
-                        '<button class="proof-viewer-close" id="proof-viewer-close" aria-label="Close viewer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Exit</button>' +
+                        '<button class="proof-viewer-close" id="proof-viewer-close" aria-label="Close viewer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg><span class="proof-viewer-close-label">Exit</span></button>' +
                     '</div>' +
                     '<p class="proof-instructions">Hover over an overlay to preview it, or click to keep it enabled and combine exposures. Experiment with different combinations to find your favourite composite.</p>' +
                     '<p class="proof-instructions">Note: this is an indicative preview only. The base image and overlays will be refined in post-processing for the final edit.</p>' +

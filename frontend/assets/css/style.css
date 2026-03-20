@@ -610,7 +610,7 @@ table tr:nth-child(even) {
     border: 1px solid #555;
     color: var(--white);
     font-size: 1em;
-    padding: 6px;
+    padding: 8px;
     line-height: 1;
     cursor: pointer;
     flex-shrink: 0;
@@ -618,7 +618,10 @@ table tr:nth-child(even) {
     font-family: 'Oswald', sans-serif;
     display: flex;
     align-items: center;
-    gap: 4px;
+}
+
+.proof-viewer-close-label {
+    padding: 0 4px;
 }
 
 .proof-viewer-close:hover {
