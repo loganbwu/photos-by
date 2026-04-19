@@ -76,9 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         manifest = manifest.images || [];
                     }
 
-                    if (typeof window.initProofViewer === 'function' && proofs.length > 0) {
-                        // Proof-only album: show the compositor, not the individual images
-                        window.initProofViewer(proofs, data.base_url);
+                    if (typeof window.initMultipleExposureViewer === 'function' && proofs.length > 0) {
+                        window.initMultipleExposureViewer(proofs, data.base_url);
                     } else {
                         populateGallery(data.base_url, data.images, manifest);
                     }

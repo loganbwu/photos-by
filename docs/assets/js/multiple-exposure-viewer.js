@@ -11,22 +11,22 @@
     var TRANSITION_MS = 250;
 
 
-    function initProofViewer(proofs, galleryBaseUrl) {
+    function initMultipleExposureViewer(proofs, galleryBaseUrl) {
         if (!proofs || proofs.length === 0) return;
         baseUrl = galleryBaseUrl;
-        renderProofsSection(proofs);
+        renderExposuresSection(proofs);
         createModal();
     }
 
-    function renderProofsSection(proofs) {
-        var existing = document.getElementById('proofs-section');
+    function renderExposuresSection(proofs) {
+        var existing = document.getElementById('exposures-section');
         if (existing) existing.remove();
 
         var section = document.createElement('div');
-        section.id = 'proofs-section';
+        section.id = 'exposures-section';
 
         var heading = document.createElement('h2');
-        heading.textContent = 'Composite Proofs';
+        heading.textContent = 'Multiple Exposures';
         section.appendChild(heading);
 
         var p = document.createElement('p');
@@ -35,11 +35,11 @@
         section.appendChild(p);
 
         var cards = document.createElement('div');
-        cards.className = 'proof-cards';
+        cards.className = 'exposure-cards';
 
         proofs.forEach(function (proof) {
             var card = document.createElement('div');
-            card.className = 'proof-card';
+            card.className = 'exposure-card';
             card.setAttribute('role', 'button');
             card.setAttribute('tabindex', '0');
             card.setAttribute('aria-label', 'Open compositor for ' + proof.id);
@@ -49,14 +49,14 @@
             img.alt = proof.id;
 
             var info = document.createElement('div');
-            info.className = 'proof-card-info';
+            info.className = 'exposure-card-info';
 
             var idLabel = document.createElement('span');
-            idLabel.className = 'proof-card-id';
+            idLabel.className = 'exposure-card-id';
             idLabel.textContent = proof.id.replace(/_/g, ' ');
 
             var countLabel = document.createElement('span');
-            countLabel.className = 'proof-card-count';
+            countLabel.className = 'exposure-card-count';
             countLabel.textContent = proof.overlays.length + ' overlay' + (proof.overlays.length !== 1 ? 's' : '');
 
             info.appendChild(idLabel);
@@ -64,9 +64,9 @@
             card.appendChild(img);
             card.appendChild(info);
 
-            card.addEventListener('click', function () { openProofViewer(proof); });
+            card.addEventListener('click', function () { openExposureViewer(proof); });
             card.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter' || e.key === ' ') openProofViewer(proof);
+                if (e.key === 'Enter' || e.key === ' ') openExposureViewer(proof);
             });
 
             cards.appendChild(card);
@@ -81,45 +81,45 @@
     }
 
     function createModal() {
-        if (document.getElementById('proof-viewer-modal')) return;
+        if (document.getElementById('multiple-exposure-viewer-modal')) return;
 
         var modal = document.createElement('div');
-        modal.id = 'proof-viewer-modal';
+        modal.id = 'multiple-exposure-viewer-modal';
         modal.setAttribute('role', 'dialog');
         modal.setAttribute('aria-modal', 'true');
-        modal.setAttribute('aria-label', 'Composite proof viewer');
+        modal.setAttribute('aria-label', 'Multiple exposure viewer');
 
         modal.innerHTML =
-            '<div class="proof-viewer-content">' +
-                '<div class="proof-viewer-canvas-wrap">' +
-                    '<canvas id="proof-canvas"></canvas>' +
+            '<div class="multiple-exposure-viewer-content">' +
+                '<div class="multiple-exposure-viewer-canvas-wrap">' +
+                    '<canvas id="exposure-canvas"></canvas>' +
                 '</div>' +
-                '<div class="proof-viewer-controls">' +
-                    '<div class="proof-viewer-header">' +
-                        '<h2 id="proof-viewer-title">Composite Proof</h2>' +
-                        '<button class="proof-viewer-close" id="proof-viewer-close" aria-label="Close viewer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg><span class="proof-viewer-close-label">Exit</span></button>' +
+                '<div class="multiple-exposure-viewer-controls">' +
+                    '<div class="multiple-exposure-viewer-header">' +
+                        '<h2 id="multiple-exposure-viewer-title">Multiple Exposure</h2>' +
+                        '<button class="multiple-exposure-viewer-close" id="multiple-exposure-viewer-close" aria-label="Close viewer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg><span class="multiple-exposure-viewer-close-label">Exit</span></button>' +
                     '</div>' +
-                    '<p class="proof-instructions">Hover over an overlay to preview it, or click to keep it enabled and combine exposures. Experiment with different combinations to find your favourite composite.</p>' +
-                    '<p class="proof-instructions">Note: this is an indicative preview only. The base image and overlays will be refined in post-processing for the final edit.</p>' +
-                    '<div id="proof-overlays-list" class="proof-overlays-list"></div>' +
+                    '<p class="exposure-instructions">Hover over an overlay to preview it, or click to keep it enabled and combine exposures. Experiment with different combinations to find your favourite composite.</p>' +
+                    '<p class="exposure-instructions">Note: this is an indicative preview only. The base image and overlays will be refined in post-processing for the final edit.</p>' +
+                    '<div id="exposure-overlays-list" class="exposure-overlays-list"></div>' +
                 '</div>' +
             '</div>';
 
         document.body.appendChild(modal);
 
-        document.getElementById('proof-viewer-close').addEventListener('click', closeModal);
+        document.getElementById('multiple-exposure-viewer-close').addEventListener('click', closeModal);
         modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
         document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
     }
 
-    function openProofViewer(proof) {
+    function openExposureViewer(proof) {
         currentProof = proof;
         overlayImages = [];
         overlaySettings = proof.overlays.map(function () { return { enabled: false, hovering: false, currentAlpha: 0, targetAlpha: 0 }; });
 
-        document.getElementById('proof-viewer-title').textContent = proof.id.replace(/_/g, ' ');
+        document.getElementById('multiple-exposure-viewer-title').textContent = proof.id.replace(/_/g, ' ');
 
-        var modal = document.getElementById('proof-viewer-modal');
+        var modal = document.getElementById('multiple-exposure-viewer-modal');
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
 
@@ -128,16 +128,16 @@
     }
 
     function renderOverlayControls(proof) {
-        var list = document.getElementById('proof-overlays-list');
+        var list = document.getElementById('exposure-overlays-list');
         list.innerHTML = '';
 
         var baseLabel = document.createElement('p');
-        baseLabel.className = 'proof-control-label';
+        baseLabel.className = 'exposure-control-label';
         baseLabel.textContent = 'Base';
         list.appendChild(baseLabel);
 
         var baseName = document.createElement('p');
-        baseName.className = 'proof-base-name';
+        baseName.className = 'exposure-base-name';
         baseName.textContent = proof.base;
         list.appendChild(baseName);
 
@@ -146,13 +146,13 @@
         }
 
         var overlayLabel = document.createElement('p');
-        overlayLabel.className = 'proof-control-label';
+        overlayLabel.className = 'exposure-control-label';
         overlayLabel.textContent = 'Overlays';
         list.appendChild(overlayLabel);
 
         proof.overlays.forEach(function (name, i) {
             var btn = document.createElement('button');
-            btn.className = 'proof-overlay-btn';
+            btn.className = 'exposure-overlay-btn';
             btn.textContent = name;
             btn.title = name;
             (function (idx) {
@@ -177,7 +177,7 @@
     }
 
     function loadImages(proof) {
-        var canvas = document.getElementById('proof-canvas');
+        var canvas = document.getElementById('exposure-canvas');
         var ctx = canvas.getContext('2d');
 
         canvas.width = canvas.width || 400;
@@ -254,7 +254,7 @@
     function redraw() {
         if (!baseImage || !baseImage.complete) return;
 
-        var canvas = document.getElementById('proof-canvas');
+        var canvas = document.getElementById('exposure-canvas');
         var ctx = canvas.getContext('2d');
         var blendMode = 'screen';
 
@@ -277,7 +277,7 @@
     }
 
     function closeModal() {
-        var modal = document.getElementById('proof-viewer-modal');
+        var modal = document.getElementById('multiple-exposure-viewer-modal');
         if (modal) modal.style.display = 'none';
         document.body.style.overflow = '';
         currentProof = null;
@@ -285,5 +285,5 @@
         overlayImages = [];
     }
 
-    window.initProofViewer = initProofViewer;
+    window.initMultipleExposureViewer = initMultipleExposureViewer;
 }());

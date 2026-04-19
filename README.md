@@ -8,6 +8,7 @@ A lightweight, static photography portfolio website showcasing pole dance and ae
 *   **Lightbox Viewer:** Full-screen image viewing with navigation (keyboard, on-screen buttons, and swipe gestures).
 *   **Private Galleries:** A secure, password-protected gallery feature for clients, powered by a Python backend.
 *   **Responsive Design:** Optimized for various screen sizes.
+*   **Multiple Exposure Viewer:** An interactive browser-based compositor for private galleries. Clients can blend multiple exposure overlays onto a base image using screen blending to preview composite combinations before final editing.
 *   **Minimal UI:** Clean and professional user interface built with pure CSS.
 *   **Automated Build Process:** Uses a Node.js script to generate static HTML files.
 
