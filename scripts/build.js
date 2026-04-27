@@ -1,12 +1,13 @@
 const fs = require('fs').promises;
 const path = require('path');
+const { marked } = require('marked');
 
 // --- Configuration ---
 const SRC_DIR = {
     photos: 'frontend/photos',
     partials: 'frontend/partials',
     assets: 'frontend/assets',
-    templates: 'frontend', // base.html.template is in the frontend directory
+    templates: 'frontend',
 };
 
 const BUILD_DIR = 'docs';
@@ -15,18 +16,9 @@ const PHOTOS_BUILD_DIR = path.join(BUILD_DIR, 'photos');
 
 const TEMPLATE_FILE = 'base.html.template';
 
-const PARTIAL_FILES = {
-    header: 'header_partial.html',
-    footer: 'footer_partial.html',
-    contact: 'contact_partial.html',
-    firstShoot: 'first_shoot_partial.html',
-    standardAgreement: 'standard_agreement_partial.html',
-    privateGallery: 'albums_partial.html',
-    booking: 'booking_partial.html',
-    babyg: 'babyg_partial.html',
-    sirens: 'sirens_partial.html'
-};
-
+// Partials are auto-discovered from frontend/partials/*_partial.{html,md}.
+// PAGES entries without a matching partial will warn; discovered partials without
+// a matching PAGES entry will get a default page at {slug}/index.html.
 const PAGES = [
     {
         name: 'index.html',
@@ -41,7 +33,6 @@ const PAGES = [
         pathPrefix: '../',
         homePathPrefix: '../',
         contentKey: 'contact',
-        partial: PARTIAL_FILES.contact,
         title: 'Contact Photos by Logan | Pole & Aerial Photographer',
         metaDescription: 'Get in touch with Logan for pole dance and aerial arts photography services in Melbourne and Shanghai. Event coverage and studio shoots available.',
     },
@@ -50,7 +41,6 @@ const PAGES = [
         pathPrefix: '../',
         homePathPrefix: '../',
         contentKey: 'firstShoot',
-        partial: PARTIAL_FILES.firstShoot,
         title: 'Your First Pole/Aerial Photo Shoot Guide | Photos by Logan',
         metaDescription: 'Preparing for your first pole dance or aerial photo shoot? Get tips and advice from Photos by Logan to make the most of your session.',
     },
@@ -59,7 +49,6 @@ const PAGES = [
         pathPrefix: '../',
         homePathPrefix: '../',
         contentKey: 'standardAgreement',
-        partial: PARTIAL_FILES.standardAgreement,
         title: 'Photography Agreement | Photos by Logan',
         metaDescription: 'Review the standard photography session agreement for photoshoots with Photos by Logan.',
     },
@@ -67,18 +56,16 @@ const PAGES = [
         name: 'albums/index.html',
         pathPrefix: '../',
         homePathPrefix: '../',
-        contentKey: 'privateGallery',
-        partial: PARTIAL_FILES.privateGallery,
+        contentKey: 'albums',
         title: 'Albums | Photos by Logan',
         metaDescription: 'Access a private photo album.',
-        scripts: ['assets/js/private-gallery.js'] // Page-specific script
+        scripts: ['assets/js/private-gallery.js'],
     },
     {
         name: 'booking/index.html',
         pathPrefix: '../',
         homePathPrefix: '../',
         contentKey: 'booking',
-        partial: PARTIAL_FILES.booking,
         title: 'Booking | Photos by Logan',
         metaDescription: 'Book a photoshoot session.',
     },
@@ -87,22 +74,36 @@ const PAGES = [
         pathPrefix: '../',
         homePathPrefix: '../',
         contentKey: 'babyg',
-        partial: PARTIAL_FILES.babyg,
-        title: 'Gabby\'s birthday | Photos by Logan',
-        metaDescription: 'Guests and performances from Gabby\'s birthday and cancer remission celebration.',
+        title: "Gabby's birthday | Photos by Logan",
+        metaDescription: "Guests and performances from Gabby's birthday and cancer remission celebration.",
     },
     {
         name: 'sirens/index.html',
         pathPrefix: '../',
         homePathPrefix: '../',
         contentKey: 'sirens',
-        partial: PARTIAL_FILES.sirens,
         title: 'Sirens Pole Competition | Photos by Logan',
         metaDescription: 'Sirens pole competition media.',
-    }
+    },
 ];
 
 // --- Helper Functions ---
+
+// "first_shoot_partial.html" -> "firstShoot"
+function filenameToKey(filename) {
+    const slug = filename.replace(/_partial\.(html|md)$/, '');
+    return slug.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
+
+// "firstShoot" -> "first_shoot"
+function keyToSlug(key) {
+    return key.replace(/([A-Z])/g, '_$1').toLowerCase();
+}
+
+// "first_shoot" -> "First Shoot"
+function slugToTitle(slug) {
+    return slug.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
 
 async function readFileContent(filePath, isCritical = true) {
     try {
@@ -110,9 +111,9 @@ async function readFileContent(filePath, isCritical = true) {
     } catch (err) {
         console.error(`Error reading file ${filePath}:`, err.message);
         if (isCritical) {
-            throw err; // Re-throw if critical, allowing build to fail
+            throw err;
         }
-        return ''; // Return empty for non-critical files (e.g., optional partials)
+        return '';
     }
 }
 
@@ -152,16 +153,15 @@ async function getImageFiles(directory) {
         return files.filter(file => /\.(jpg|jpeg|png)$/i.test(file));
     } catch (err) {
         console.error(`Error scanning image directory ${directory}:`, err.message);
-        throw err; // Image directory is critical
+        throw err;
     }
 }
 
 function generateGalleryHTML(imageFiles) {
     let html = '<div id="image-gallery-container" class="image-gallery-container">';
     imageFiles.forEach(imageFile => {
-        // Improved alt text
         const descriptiveAlt = `Pole and aerial arts photo by Logan - ${imageFile.replace(/\.[^/.]+$/, "")}`;
-        const webPath = path.join('photos', imageFile).replace(/\\/g, '/'); // Ensure forward slashes for web
+        const webPath = path.join('photos', imageFile).replace(/\\/g, '/');
         html += `
       <img src="${webPath}" alt="${descriptiveAlt}" class="gallery-image-source grid__item-image-lazy js-lazy" onclick="openLightbox('${webPath}')">`;
     });
@@ -171,12 +171,15 @@ function generateGalleryHTML(imageFiles) {
 }
 
 async function loadPartials() {
+    const files = await fs.readdir(SRC_DIR.partials);
+    const partialFiles = files.filter(f => /_partial\.(html|md)$/.test(f));
     const loadedPartials = {};
-    for (const key in PARTIAL_FILES) {
-        const partialPath = path.join(SRC_DIR.partials, PARTIAL_FILES[key]);
-        // Header and Footer are critical, others might be optional depending on design
-        const isCriticalPartial = key === 'header' || key === 'footer';
-        loadedPartials[key] = await readFileContent(partialPath, isCriticalPartial);
+    for (const filename of partialFiles) {
+        const key = filenameToKey(filename);
+        const partialPath = path.join(SRC_DIR.partials, filename);
+        const isCritical = key === 'header' || key === 'footer';
+        const content = await readFileContent(partialPath, isCritical);
+        loadedPartials[key] = filename.endsWith('.md') ? `<article id="${key}">${marked(content)}</article>` : content;
     }
     return loadedPartials;
 }
@@ -186,43 +189,57 @@ async function loadPartials() {
 async function buildSite() {
     console.log('Starting build process...');
 
-    // 1. Ensure build directory exists
     try {
         await fs.mkdir(BUILD_DIR, { recursive: true });
         console.log(`Build directory '${BUILD_DIR}' ensured.`);
     } catch (err) {
         console.error('Failed to create build directory:', err.message);
-        return; // Exit if we can't create the main build directory
+        return;
     }
 
-    // 2. Load base template and common partials
     const baseTemplatePath = path.join(SRC_DIR.templates, TEMPLATE_FILE);
     const baseTemplateContent = await readFileContent(baseTemplatePath);
-    if (!baseTemplateContent) return; // Exit if base template fails to load
+    if (!baseTemplateContent) return;
 
     const partials = await loadPartials();
     if (!partials.header || !partials.footer) {
         console.error('Critical header or footer partial missing. Aborting build.');
         return;
     }
-    
-    // 3. Prepare gallery content (if needed for index page)
+
+    // Extend PAGES with defaults for any discovered partials not explicitly declared
+    const SKIP_KEYS = new Set(['header', 'footer']);
+    const coveredKeys = new Set(PAGES.map(p => p.contentKey));
+    const allPages = [...PAGES];
+    for (const key of Object.keys(partials)) {
+        if (SKIP_KEYS.has(key) || coveredKeys.has(key)) continue;
+        const slug = keyToSlug(key);
+        console.log(`Auto-generating page for undeclared partial: ${key} -> ${slug}/index.html`);
+        allPages.push({
+            name: `${slug}/index.html`,
+            pathPrefix: '../',
+            homePathPrefix: '../',
+            contentKey: key,
+            title: `${slugToTitle(slug)} | Photos by Logan`,
+            metaDescription: '',
+        });
+    }
+
     let galleryHTML = '';
-    if (PAGES.some(page => page.contentKey === 'gallery')) {
+    if (allPages.some(page => page.contentKey === 'gallery')) {
         const imageFiles = await getImageFiles(SRC_DIR.photos);
         console.log(`Found ${imageFiles.length} images.`);
         galleryHTML = generateGalleryHTML(imageFiles);
     }
 
-    // 4. Build each page
-    for (const page of PAGES) {
+    for (const page of allPages) {
         let pageSpecificContent = '';
         if (page.contentKey === 'gallery') {
             pageSpecificContent = galleryHTML;
-        } else if (page.partial && partials[page.contentKey]) {
+        } else if (partials[page.contentKey]) {
             pageSpecificContent = partials[page.contentKey];
-        } else if (page.partial) {
-            console.warn(`Partial for page ${page.name} (key: ${page.contentKey}) not found or failed to load. Page might be incomplete.`);
+        } else {
+            console.warn(`Partial for page ${page.name} (key: ${page.contentKey}) not found. Page might be incomplete.`);
         }
 
         let pageHtml = baseTemplateContent
@@ -234,7 +251,6 @@ async function buildSite() {
             .replace('<!-- CONTENT_PLACEHOLDER -->', pageSpecificContent)
             .replace('<!-- PAGE_SPECIFIC_SCRIPTS_PLACEHOLDER -->', page.scripts ? page.scripts.map(scriptPath => `<script src="${page.pathPrefix}${scriptPath}" defer></script>`).join('\n') : '');
 
-        // --- Dynamic URL Replacement ---
         const urlMappings = {
             'HOME_URL': 'index.html',
             'FIRST_SHOOT_URL': 'first_shoot/index.html',
@@ -254,7 +270,6 @@ async function buildSite() {
         await writeFileContent(outputPath, pageHtml);
     }
 
-    // 5. Copy assets and photos
     console.log('Copying assets...');
     await copyDirectoryRecursive(SRC_DIR.assets, ASSETS_BUILD_DIR);
     console.log('Assets copied.');
@@ -263,9 +278,8 @@ async function buildSite() {
     await copyDirectoryRecursive(SRC_DIR.photos, PHOTOS_BUILD_DIR);
     console.log('Photos copied.');
 
-    // 6. Create CNAME file
     const cnamePath = path.join(BUILD_DIR, 'CNAME');
-    await writeFileContent(cnamePath, 'photosby.loganwu.co.nz'); // Updated CNAME
+    await writeFileContent(cnamePath, 'photosby.loganwu.co.nz');
     console.log('CNAME file created.');
 
     console.log('Build process completed successfully!');
@@ -274,5 +288,5 @@ async function buildSite() {
 // --- Run Build ---
 buildSite().catch(err => {
     console.error('Unhandled error during build process:', err.message);
-    process.exit(1); // Exit with error code
+    process.exit(1);
 });

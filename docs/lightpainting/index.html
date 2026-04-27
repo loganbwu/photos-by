@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Lightpainting | Photos by Logan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css?v=1.1">
+</head>
+<body>
+  <header>
+    <nav class="header__nav" aria-label="Main navigation">
+    <div id="mobile-nav"> <!-- This div might be for JS toggling, keep for now -->
+        <a href="../first_shoot/">FIRST SHOOT?</a>
+        <a href="../standard_agreement/">STANDARD AGREEMENT</a>
+        <a href="../albums/">ALBUMS</a>
+        <a href="../booking/">BOOKING</a>
+        <a href="../contact/">CONTACT</a>
+    </div>
+</nav>
+<div class="header__title">
+    <!-- The H1 for the site title/name is often in the main template or a specific branding partial.
+         If this header is purely for navigation, this H1 might be better placed elsewhere.
+         For now, keeping it as per original structure. -->
+    <h1><a href="../" class="header__title-link">Photos by Logan</a></h1>
+    <span class="header__tagline">Melbourne | Shanghai</span>
+</div>
+<div class="header__empty"></div> <!-- This seems to be a spacer, might be achievable with CSS flex properties on the parent -->
+
+  </header>
+  <main>
+    <div id="album-viewer" class="grid-main">
+      <article id="lightpainting"><h1>Introduction to light painting shoots</h1>
+<h2>Introduction</h2>
+<p>Hi, if you&#39;re reading this, you&#39;re probably scheduled to shoot with me at Pole Haven on May 16th. Thank you for booking and I&#39;m really excited to see you!</p>
+<p>Normally I send some basic information about the shoot ahead of time, and we have a quick briefing in the studio. However, shooting with light painting requires some special preparation and by delivering this briefing ahead of time, we can maximise the time we have in the studio.</p>
+<h2>Before your shoot</h2>
+<p>As with any photoshoot, there are three main things you need to prepare.</p>
+<ol>
+<li><strong>Inspiration</strong></li>
+<li><strong>Costume, makeup, and props</strong></li>
+<li><strong>Poses</strong></li>
+</ol>
+<p>I&#39;m often not involved in your inspiration, costume, makeup, and props. However, I am deeply involved in posing. It&#39;s important to remember that people look their best when they look effortless. The number one reason people stop looking effortless is they choose poses that are challenging. So, my regular advice is to pick moves you can hold for several seconds. However, we need to change that for this shoot and to explain why, I&#39;ll explain how the shoot runs.</p>
+<h2>Anatomy of a light painting photo</h2>
+<p>A regular light painting photo is taken as a single long exposure over several seconds. During that exposure, the light painting turns into streaks  baked into the photo and can&#39;t be changed.</p>
+<p>I&#39;ve developed a process to have more creative control:</p>
+<ol>
+<li>Take a regular base photo with flash</li>
+<li>Take a series of long exposures adding light streaks</li>
+<li>Add the light streaks to the base photo in Photoshop</li>
+</ol>
+<p>The benefits are that we can mix and match the long exposures. We can also edit the light streaks to pick the parts we want.</p>
+<p>I would recommend you use a practice session to check how long you can hold a pose for. It&#39;s also better if you can do it without wobbling, including arms and feet.</p>
+<p>I&#39;m not really an authority on the more difficult side of static poses but I&#39;ll run a reel of examples. If you&#39;re stuck for inspiration, give these and make them your own.</p>
+<h2>After the shoot</h2>
+<p>I&#39;ll have a laptop set up to receive unedited photos as we go. But since the photos are split up by base photos and long exposures, after the shoot I&#39;ll send through a website link where you can play with the light streaks and get a feel for something closer to the final image.</p>
+<p>You can use a demo of the website <a href="https://photosby.loganwu.co.nz/albums/?album=lightpainting_demo">here</a>.</p>
+<p>Using this website, we&#39;ll then follow the normal selection process where you choose photos you like the way you look (mostly ignore the light streaks) and I do a proper edit.</p>
+<h2>That&#39;s the end!</h2>
+<p>Thank you for reading and I hope you&#39;re looking forward to the shoot as much as I am! Please don&#39;t hesitate to send a message if you have any questions.</p>
+</article>
+    </div>
+  </main>
+  <footer>
+  <div class="copyright"><p>&copy; 2026 Photos by Logan</p></div>
+</footer>
+
+  <div id="lightbox">
+  <div id="lightbox-filename" class="filename-label"></div>
+  <img src="" alt="Fullsize image">
+  <span class="close-button" onclick="closeLightbox()">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+  </span>
+  <span class="nav-button left-button" id="prev-button">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="15 18 9 12 15 6"></polyline>
+    </svg>
+  </span>
+  <span class="nav-button right-button" id="next-button">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </span>
+</div>
+<script src="../assets/js/script.js?v=1.1"></script>
+    <script src="../assets/js/gallery.js?v=1.1"></script>
+    <script src="../assets/js/private-gallery.js?v=1.1"></script>
+    <script src="../assets/js/multiple-exposure-viewer.js?v=1.0"></script>
+    
+</body>
+</html>
