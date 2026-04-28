@@ -85,6 +85,14 @@ const PAGES = [
         title: 'Sirens Pole Competition | Photos by Logan',
         metaDescription: 'Sirens pole competition media.',
     },
+    {
+        name: 'pole_dance_artistry/index.html',
+        pathPrefix: '../',
+        homePathPrefix: '../',
+        contentKey: 'poleDanceArtistry',
+        title: 'Pole Dance Artistry | Photos by Logan',
+        metaDescription: 'Pole Dance Artistry competition media — photos and videos by Logan.',
+    },
 ];
 
 // --- Helper Functions ---
