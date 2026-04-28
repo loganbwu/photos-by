@@ -2,9 +2,9 @@
 
 ## Introduction
 
-Hi, if you're reading this, you're probably scheduled to shoot with me at Pole Haven on May 16th. Thank you for booking and I'm really excited to see you!
+Hi, if you're reading this, you're probably scheduled to shoot with me at Pole Haven on May 16th. Thanks for booking and I'm really excited to see you!
 
-Normally I send some basic information about the shoot ahead of time, and we have a quick briefing in the studio. However, shooting with light painting requires some special preparation and by delivering this briefing ahead of time, we can maximise the time we have in the studio.
+Normally I send some basic information about the shoot and we have a quick briefing in the studio. However, shooting with light painting requires some special preparation and by having this briefing ahead of time, we can maximise our shooting time.
 
 ## Before your shoot
 
@@ -14,7 +14,9 @@ As with any photoshoot, there are three main things you need to prepare.
 2. **Costume, makeup, and props**
 3. **Poses**
 
-I'm often not involved in your inspiration, costume, makeup, and props. However, I am deeply involved in posing. It's important to remember that people look their best when they look effortless. The number one reason people stop looking effortless is they choose poses that are challenging. So, my regular advice is to pick moves you can hold for several seconds. However, we need to change that for this shoot and to explain why, I'll explain how the shoot runs.
+Costume, makeup and props are normally entirely your choice. In general, I suggest you look for visual interest. Things like interesting textures and shapes work best.
+
+When it comes to posing, it's important to remember that you look their best when you look effortlessly in-control. The number one reason people lose this look is they choose poses that are too challenging. That's especially important for this shoot, and to explain why, I'll explain how the shoot runs.
 
 ## Anatomy of a light painting photo
 
@@ -23,22 +25,22 @@ A regular light painting photo is taken as a single long exposure over several s
 I've developed a process to have more creative control:
 
 1. Take a regular base photo with flash
-2. Take a series of long exposures adding light streaks
-3. Add the light streaks to the base photo in Photoshop
+2. Take a series of long exposures creating the light streaks
+3. Combine the light streaks with the base photo in Photoshop
 
 The benefits are that we can mix and match the long exposures. We can also edit the light streaks to pick the parts we want.
 
-I would recommend you use a practice session to check how long you can hold a pose for. It's also better if you can do it without wobbling, including arms and feet.
+I recommend you use a practice session to check how long you can hold a pose for. It's also good to check if any outstretched arms and legs wobble.
 
-I'm not really an authority on the more difficult side of static poses but I'll run a reel of examples. If you're stuck for inspiration, give these and make them your own.
+I'll run a sequence from past shoots where I've selected poses that can be held for a long time. If you're looking for inspiration, give these a go and make them your own. I'd recommend you practice 6-8 poses before the shoot.
 
 ## After the shoot
 
-I'll have a laptop set up to receive unedited photos as we go. But since the photos are split up by base photos and long exposures, after the shoot I'll send through a website link where you can play with the light streaks and get a feel for something closer to the final image.
+As we shoot, I'll have unedited photos streaming to a laptop. But since the photos are split up by base photos and long exposures, afterwards I'll send through a website link where you can play with the light streaks and get a feel for something closer to the final image.
 
 You can use a demo of the website [here](https://photosby.loganwu.co.nz/albums/?album=lightpainting_demo).
 
-Using this website, we'll then follow the normal selection process where you choose photos you like the way you look (mostly ignore the light streaks) and I do a proper edit.
+With this website, we'll follow the normal selection process where you choose photos you want a full edit for. I recommend you choose photos where you like the way you look in the base photo, because other parts of the photo will be edited extensively.
 
 ## That's the end!
 
