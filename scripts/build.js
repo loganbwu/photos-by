@@ -86,10 +86,10 @@ const PAGES = [
         metaDescription: 'Sirens pole competition media.',
     },
     {
-        name: 'pole_dance_artistry/index.html',
+        name: 'pda/index.html',
         pathPrefix: '../',
         homePathPrefix: '../',
-        contentKey: 'poleDanceArtistry',
+        contentKey: 'pda',
         title: 'Pole Dance Artistry | Photos by Logan',
         metaDescription: 'Pole Dance Artistry competition media — photos and videos by Logan.',
     },
