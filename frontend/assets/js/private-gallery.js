@@ -6,12 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const albumAccessSection = document.getElementById('album-access');
     const galleryContainer = document.getElementById('image-gallery-container');
 
-    // --- Configuration ---
-    // Replace this with your actual backend endpoint URL
-    const backendUrl = 'https://australia-southeast1-photos-by-463514.cloudfunctions.net/private-gallery-backend'; 
-    // Example: const backendUrl = 'https://your-service-name-abcdef.a.run.app/check-album';
+    const backendUrl = 'https://australia-southeast1-photos-by-463514.cloudfunctions.net/private-gallery-backend';
 
-    if (!albumNameForm || !albumNameInput || !submitButton || !errorMessageElement || !albumAccessSection || !galleryContainer) {
+    if (!albumAccessSection || !galleryContainer) {
         console.error('Private gallery elements not found. Script will not run.');
         return;
     }
@@ -25,36 +22,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Check for album name in URL query parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const albumNameFromUrl = urlParams.get('album');
+    const presetAlbum = albumAccessSection.dataset.album;
 
-    if (albumNameFromUrl) {
-        albumNameInput.value = albumNameFromUrl.toLowerCase();
-        // Use requestAnimationFrame to ensure the UI is ready before clicking
-        requestAnimationFrame(() => {
-            submitButton.click();
-        });
-    }
-
-    albumNameForm.addEventListener('submit', async (event) => { // Changed to form submit
-        event.preventDefault(); // Prevent default form submission
-        const albumName = albumNameInput.value.toLowerCase();
-        if (!albumName) {
-            displayError('Please enter an album name.');
+    if (presetAlbum) {
+        loadAlbum(presetAlbum);
+    } else {
+        if (!albumNameForm || !albumNameInput || !submitButton || !errorMessageElement) {
+            console.error('Private gallery form elements not found. Script will not run.');
             return;
         }
 
-        hideError();
-        submitButton.disabled = true;
-        submitButton.textContent = 'Verifying...';
+        const urlParams = new URLSearchParams(window.location.search);
+        const albumNameFromUrl = urlParams.get('album');
+        if (albumNameFromUrl) {
+            albumNameInput.value = albumNameFromUrl.toLowerCase();
+            requestAnimationFrame(() => { submitButton.click(); });
+        }
 
+        albumNameForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const albumName = albumNameInput.value.toLowerCase();
+            if (!albumName) {
+                displayError('Please enter an album name.');
+                return;
+            }
+            hideError();
+            submitButton.disabled = true;
+            submitButton.textContent = 'Verifying...';
+            await loadAlbum(albumName);
+            submitButton.disabled = false;
+            submitButton.textContent = 'View Gallery';
+        });
+    }
+
+    async function loadAlbum(albumName) {
         try {
             const response = await fetch(backendUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ album_name: albumName }),
             });
 
@@ -62,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
                 if (data.base_url && data.images && data.images.length > 0) {
                     albumAccessSection.style.display = 'none';
-                    galleryContainer.style.display = ''; // Show gallery container
+                    galleryContainer.style.display = '';
 
                     // The backend may return the manifest in one of two shapes:
                     // - New backend: { manifest: [...], proofs: [...] }
@@ -85,17 +90,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     displayError('No images found for the provided album name, or the gallery is empty.');
                 }
             } else {
-                const errorData = await response.json().catch(() => null); // Try to parse error, but don't fail if no JSON body
+                const errorData = await response.json().catch(() => null);
                 displayError(errorData?.detail || `Error: ${response.status} - ${response.statusText}`);
             }
         } catch (error) {
-            console.error('Error submitting album name:', error);
+            console.error('Error loading album:', error);
             displayError('An error occurred. Please try again.');
-        } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = 'View Gallery';
         }
-    });
+    }
 
     function populateGallery(baseUrl, images, manifest = null) {
         if (!galleryContainer) return;

@@ -38,9 +38,11 @@ I'll run a sequence from past shoots where I've selected poses that can be held 
 
 As we shoot, I'll have unedited photos streaming to a laptop. But since the photos are split up by base photos and long exposures, afterwards I'll send through a website link where you can play with the light streaks and get a feel for something closer to the final image.
 
-You can use a demo of the website [here](https://photosby.loganwu.co.nz/albums/?album=lightpainting_demo).
+Below is a demo of that website. With this website, we'll follow the normal selection process where you choose photos you want a full edit for. I recommend you choose photos where you like the way you look in the base photo, because other parts of the photo will be edited extensively.
 
-With this website, we'll follow the normal selection process where you choose photos you want a full edit for. I recommend you choose photos where you like the way you look in the base photo, because other parts of the photo will be edited extensively.
+<div id="album-access" data-album="lightpainting_demo"></div>
+<p id="error-message" style="color: firebrick; display: none;"></p>
+<div id="image-gallery-container" class="image-gallery-container" style="display: none;"></div>
 
 ## That's the end!
 

@@ -62,6 +62,15 @@ const PAGES = [
         scripts: ['assets/js/private-gallery.js'],
     },
     {
+        name: 'lightpainting/index.html',
+        pathPrefix: '../',
+        homePathPrefix: '../',
+        contentKey: 'lightpainting',
+        title: 'Light Painting Shoot Guide | Photos by Logan',
+        metaDescription: 'Preparation guide for light painting photoshoots with Photos by Logan.',
+        scripts: ['assets/js/private-gallery.js'],
+    },
+    {
         name: 'booking/index.html',
         pathPrefix: '../',
         homePathPrefix: '../',
