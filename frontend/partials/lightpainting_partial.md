@@ -34,15 +34,15 @@ I recommend you use a practice session to check how long you can hold a pose for
 
 I'll run a sequence from past shoots where I've selected poses that can be held for a long time. If you're looking for inspiration, give these a go and make them your own. I'd recommend you practice 6-8 poses before the shoot.
 
+<div id="album-access" data-album="easy_poses"></div>
+<p id="error-message" style="color: firebrick; display: none;"></p>
+<div id="image-gallery-container" class="image-gallery-container" style="display: none;"></div>
+
 ## After the shoot
 
 As we shoot, I'll have unedited photos streaming to a laptop. But since the photos are split up by base photos and long exposures, afterwards I'll send through a website link where you can play with the light streaks and get a feel for something closer to the final image.
 
-Below is a demo of that website. With this website, we'll follow the normal selection process where you choose photos you want a full edit for. I recommend you choose photos where you like the way you look in the base photo, because other parts of the photo will be edited extensively.
-
-<div id="album-access" data-album="lightpainting_demo"></div>
-<p id="error-message" style="color: firebrick; display: none;"></p>
-<div id="image-gallery-container" class="image-gallery-container" style="display: none;"></div>
+You can try a demo of that website <a href="<!-- ALBUMS_URL -->?album=lightpainting_demo" target="_blank">here</a>. With this website, we'll follow the normal selection process where you choose photos you want a full edit for. I recommend you choose photos where you like the way you look in the base photo, because other parts of the photo will be edited extensively.
 
 ## That's the end!
 
