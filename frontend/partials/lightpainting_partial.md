@@ -25,12 +25,12 @@ A regular light painting photo is taken as a single long exposure over several s
 I've developed a process to have more creative control:
 
 1. Take a regular base photo with flash
-2. Take a series of long exposures creating the light streaks
+2. Take a series of long exposures creating the light streaks for 10-20s
 3. Combine the light streaks with the base photo in Photoshop
 
 The benefits are that we can mix and match the long exposures. We can also edit the light streaks to pick the parts we want.
 
-I recommend you use a practice session to check how long you can hold a pose for. It's also good to check if any outstretched arms and legs wobble.
+I recommend you use a practice session to check how long you can hold a pose for - 20s is the goal but 10s is sufficient. It's also good to check using a video if any outstretched arms and legs wobble.
 
 I'll run a sequence from past shoots where I've selected poses that can be held for a long time. If you're looking for inspiration, give these a go and make them your own. I'd recommend you practice 6-8 poses before the shoot.
 
