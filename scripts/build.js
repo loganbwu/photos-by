@@ -190,10 +190,11 @@ async function buildSite() {
     console.log('Starting build process...');
 
     try {
+        await fs.rm(BUILD_DIR, { recursive: true, force: true });
         await fs.mkdir(BUILD_DIR, { recursive: true });
-        console.log(`Build directory '${BUILD_DIR}' ensured.`);
+        console.log(`Build directory '${BUILD_DIR}' cleaned and recreated.`);
     } catch (err) {
-        console.error('Failed to create build directory:', err.message);
+        console.error('Failed to prepare build directory:', err.message);
         return;
     }
 
