@@ -35,9 +35,3 @@ Instagram handles of the media team:\
 
 <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSe7Fj4C-TMVkYKIzu1diAltbf26eAPCu-_aALzIqiWSu6r_LQ/viewform?embedded=true" width="100%" height="2600" frameborder="0" marginheight="0" marginwidth="0">Loading…</iframe>
 
-## Previews
-
-There is nothing here yet! Miscellaneous event photos will be available here and performance previews will be emailed, normally within one week.
-<!-- <ul>
-    <li><a href="https://photosby.loganwu.co.nz/albums?album=00_miscellaneous_sirens" target="_blank">Miscellaneous</a></li>
-</ul> -->
