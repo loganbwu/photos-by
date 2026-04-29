@@ -22,7 +22,7 @@ When it comes to posing, it's important to remember that you look their best whe
 
 A regular light painting photo is taken as a single long exposure over several seconds. During that exposure, the light painting turns into streaks  baked into the photo and can't be changed.
 
-I've developed a process to have more creative control:
+I've developed a process to have more creative control and imcrease the number of usable images:
 
 1. Take a regular base photo with flash
 2. Take a series of long exposures creating the light streaks for 10-20s
