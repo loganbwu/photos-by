@@ -30,6 +30,12 @@ I've developed a process to have more creative control:
 
 The benefits are that we can mix and match the long exposures. We can also edit the light streaks to pick the parts we want.
 
+Here's a preview clip from a test shoot showing the process:
+
+<div style="display: flex; justify-content: center; margin: 1rem 0;">
+  <iframe width="315" height="560" src="https://www.youtube.com/embed/GtlhO3kzsEc" title="Light painting test shoot" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
 I recommend you use a practice session to check how long you can hold a pose for - 20s is the goal but 10s is sufficient. It's also good to check using a video if any outstretched arms and legs wobble.
 
 I'll run a sequence from past shoots where I've selected poses that can be held for a long time. If you're looking for inspiration, give these a go and make them your own. I'd recommend you practice 6-8 poses before the shoot.
