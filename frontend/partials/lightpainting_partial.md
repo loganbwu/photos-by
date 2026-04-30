@@ -14,7 +14,7 @@ As with any photoshoot, there are three main things you need to prepare.
 2. **Costume, makeup, and props**
 3. **Poses**
 
-Costume, makeup and props are normally entirely your choice. In general, I suggest you look for visual interest. Things like interesting textures and shapes work best.
+Costume, makeup and props are normally entirely your choice. In general, I suggest you look for visual interest. Things like interesting textures and shapes work best. You can also choose the colour of the rim lights (that light you from either side) and the light whip - in my opinion, matching colours with the outfit gives a strong, unified colour palette, but would also recommend considering a complementary or contrasting palette.
 
 When it comes to posing, it's important to remember that you look their best when you look effortlessly in-control. The number one reason people lose this look is they choose poses that are too challenging. That's especially important for this shoot, and to explain why, I'll explain how the shoot runs.
 
