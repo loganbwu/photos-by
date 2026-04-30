@@ -658,6 +658,7 @@ table tr:nth-child(even) {
 
 .exposure-select-all-btn:hover {
     color: var(--pale-blue);
+    background: none;
     border-color: var(--pale-blue);
 }
 
