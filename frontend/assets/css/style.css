@@ -645,18 +645,20 @@ table tr:nth-child(even) {
 }
 
 .exposure-select-all-btn {
-    font-family: Helvetica, sans-serif;
-    font-size: 0.75em;
-    text-transform: none;
-    background: transparent;
-    color: var(--grey);
-    border: none;
+    background: none;
+    border: 1px solid #555;
+    color: var(--white);
+    font-size: 0.7em;
+    padding: 4px 6px;
+    line-height: 1;
     cursor: pointer;
-    padding: 0;
+    text-transform: uppercase;
+    font-family: 'Oswald', sans-serif;
 }
 
 .exposure-select-all-btn:hover {
-    color: var(--white);
+    color: var(--pale-blue);
+    border-color: var(--pale-blue);
 }
 
 .exposure-select {
