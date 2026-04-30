@@ -145,16 +145,29 @@
             return;
         }
 
+        var overlayLabelRow = document.createElement('div');
+        overlayLabelRow.className = 'exposure-overlay-label-row';
+
         var overlayLabel = document.createElement('p');
         overlayLabel.className = 'exposure-control-label';
         overlayLabel.textContent = 'Overlays';
-        list.appendChild(overlayLabel);
+
+        var selectAllBtn = document.createElement('button');
+        selectAllBtn.className = 'exposure-select-all-btn';
+        selectAllBtn.textContent = 'Select all';
+
+        overlayLabelRow.appendChild(overlayLabel);
+        overlayLabelRow.appendChild(selectAllBtn);
+        list.appendChild(overlayLabelRow);
+
+        var overlayBtns = [];
 
         proof.overlays.forEach(function (name, i) {
             var btn = document.createElement('button');
             btn.className = 'exposure-overlay-btn';
             btn.textContent = name;
             btn.title = name;
+            overlayBtns.push(btn);
             (function (idx) {
                 btn.addEventListener('pointerenter', function () {
                     if (window.matchMedia('(hover: none)').matches) return;
@@ -176,11 +189,33 @@
                         overlaySettings[idx].suppressComparing = true;
                     }
                     btn.classList.remove('comparing');
+                    updateSelectAllBtn(selectAllBtn);
                     setTargetAlpha(idx);
                 });
             }(i));
             list.appendChild(btn);
         });
+
+        selectAllBtn.addEventListener('click', function () {
+            var allEnabled = overlaySettings.every(function (s) { return s.enabled; });
+            var enable = !allEnabled;
+            overlaySettings.forEach(function (s, idx) {
+                s.enabled = enable;
+                s.suppressComparing = enable;
+                s.hovering = false;
+                overlayBtns[idx].classList.toggle('active', enable);
+                overlayBtns[idx].classList.remove('comparing');
+                setTargetAlpha(idx);
+            });
+            updateSelectAllBtn(selectAllBtn);
+        });
+
+        updateSelectAllBtn(selectAllBtn);
+    }
+
+    function updateSelectAllBtn(btn) {
+        var allEnabled = overlaySettings.every(function (s) { return s.enabled; });
+        btn.textContent = allEnabled ? 'Deselect all' : 'Select all';
     }
 
     function loadImages(proof) {

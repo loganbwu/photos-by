@@ -638,6 +638,27 @@ table tr:nth-child(even) {
     margin: 0;
 }
 
+.exposure-overlay-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.exposure-select-all-btn {
+    font-family: Helvetica, sans-serif;
+    font-size: 0.75em;
+    text-transform: none;
+    background: transparent;
+    color: var(--grey);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.exposure-select-all-btn:hover {
+    color: var(--white);
+}
+
 .exposure-select {
     width: 100%;
     background-color: #222;
