@@ -38,7 +38,7 @@ Here's a preview clip from a test shoot showing the process:
 
 I recommend you use a practice session to check how long you can hold a pose for - 20s is the goal. It's also good to check using a video if any outstretched arms and legs wobble.
 
-I'll run a sequence from past shoots where I've selected poses that can be held for a long time. If you're looking for inspiration, give these a go and make them your own. I'd recommend you practice 6-8 poses before the shoot.
+I'll add a sequence from past shoots where I've selected poses that are fairly stable when held for a long time. If you're looking for inspiration, give these a go and make them your own. I'd recommend you practice 6-8 poses before the shoot.
 
 <div id="album-access" data-album="easy_poses"></div>
 <p id="error-message" style="color: firebrick; display: none;"></p>
