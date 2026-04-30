@@ -691,6 +691,12 @@ table tr:nth-child(even) {
     border-color: var(--pale-blue);
 }
 
+.exposure-overlay-btn.active.comparing {
+    background-color: transparent;
+    color: var(--pale-blue);
+    border-color: var(--pale-blue);
+}
+
 @media (max-width: 768px) {
     .multiple-exposure-viewer-content {
         flex-direction: column;

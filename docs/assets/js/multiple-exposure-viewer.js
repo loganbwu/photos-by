@@ -115,7 +115,7 @@
     function openExposureViewer(proof) {
         currentProof = proof;
         overlayImages = [];
-        overlaySettings = proof.overlays.map(function () { return { enabled: false, hovering: false, currentAlpha: 0, targetAlpha: 0 }; });
+        overlaySettings = proof.overlays.map(function () { return { enabled: false, hovering: false, suppressComparing: false, currentAlpha: 0, targetAlpha: 0 }; });
 
         document.getElementById('multiple-exposure-viewer-title').textContent = proof.id.replace(/_/g, ' ');
 
@@ -159,16 +159,23 @@
                 btn.addEventListener('pointerenter', function () {
                     if (window.matchMedia('(hover: none)').matches) return;
                     overlaySettings[idx].hovering = true;
+                    btn.classList.toggle('comparing', overlaySettings[idx].enabled && !overlaySettings[idx].suppressComparing);
                     setTargetAlpha(idx);
                 });
                 btn.addEventListener('pointerleave', function () {
                     if (window.matchMedia('(hover: none)').matches) return;
                     overlaySettings[idx].hovering = false;
+                    overlaySettings[idx].suppressComparing = false;
+                    btn.classList.remove('comparing');
                     setTargetAlpha(idx);
                 });
                 btn.addEventListener('click', function () {
                     overlaySettings[idx].enabled = !overlaySettings[idx].enabled;
                     btn.classList.toggle('active', overlaySettings[idx].enabled);
+                    if (overlaySettings[idx].enabled) {
+                        overlaySettings[idx].suppressComparing = true;
+                    }
+                    btn.classList.remove('comparing');
                     setTargetAlpha(idx);
                 });
             }(i));
@@ -219,7 +226,9 @@
     }
 
     function setTargetAlpha(idx) {
-        overlaySettings[idx].targetAlpha = (overlaySettings[idx].enabled || overlaySettings[idx].hovering) ? 1.0 : 0.0;
+        var s = overlaySettings[idx];
+        var effectiveHovering = s.hovering && !s.suppressComparing;
+        s.targetAlpha = (s.enabled !== effectiveHovering) ? 1.0 : 0.0;
         if (animFrameId !== null) cancelAnimationFrame(animFrameId);
         lastTimestamp = null;
         animFrameId = requestAnimationFrame(animationStep);
