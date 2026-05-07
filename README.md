@@ -196,8 +196,8 @@ A local-only utility for reviewing shots in real time while tethering. As the ca
 **Setup:**
 ```bash
 cd tether
-pip install -r requirements.txt
-python server.py
+rye sync
+rye run start
 ```
 
 Open **http://localhost:5001**, enter the shoot folder path (e.g. `~/Pictures/2026/2026-05-07`), and click **Watch**.
