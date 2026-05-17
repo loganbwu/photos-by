@@ -154,38 +154,34 @@ def get_keywords(image_bytes):
 
 def build_proofs_for_folder(image_list):
     """
-    Groups images tagged with 'multiple_exposure' into proofs using flash metadata.
+    Builds proofs for the multiple exposure viewer.
 
-    Images are already sorted by capture time. Flash-fired images become bases;
-    subsequent non-flash images become overlays for the last flash base. This
-    mirrors the tethering viewer's compute_series logic, removing the need to
-    manually tag each image with a sequence ID (seq_01, seq_02, etc.).
+    If no image is tagged 'multiple_exposure', returns [] and the regular gallery
+    is shown instead.
 
-    If no flash data is found among the tagged images, each is returned as a
-    standalone base with no overlays.
+    If any image is tagged 'multiple_exposure', ALL photos in the folder are
+    included: tagged photos are grouped by flash (flash = base, subsequent
+    non-flash = overlays), while untagged photos appear as standalone entries.
+    A non-tagged photo resets the current sequence so it cannot absorb overlays.
     """
-    me_images = [
-        img for img in image_list
-        if any(kw.lower() == 'multiple_exposure' for kw in img.get('keywords', []))
-    ]
-    if not me_images:
+    if not any(
+        any(kw.lower() == 'multiple_exposure' for kw in img.get('keywords', []))
+        for img in image_list
+    ):
         return []
-
-    has_flash = any(img.get('flash') for img in me_images)
-    if not has_flash:
-        return [
-            {'id': img['name'].rsplit('.', 1)[0], 'base': img['name'], 'overlays': []}
-            for img in me_images
-        ]
 
     proofs = []
     current = None
-    for img in me_images:
-        if img.get('flash'):
+    for img in image_list:
+        is_me = any(kw.lower() == 'multiple_exposure' for kw in img.get('keywords', []))
+        if is_me and img.get('flash'):
             current = {'id': img['name'].rsplit('.', 1)[0], 'base': img['name'], 'overlays': []}
             proofs.append(current)
-        elif current is not None:
+        elif is_me and current is not None:
             current['overlays'].append(img['name'])
+        else:
+            proofs.append({'id': img['name'].rsplit('.', 1)[0], 'base': img['name'], 'overlays': []})
+            current = None
     return proofs
 
 
