@@ -122,7 +122,7 @@
     function openExposureViewer(proof) {
         currentProof = proof;
         overlayImages = [];
-        overlaySettings = proof.overlays.map(function () { return { enabled: false, hovering: false, suppressComparing: false, currentAlpha: 0, targetAlpha: 0 }; });
+        overlaySettings = proof.overlays.map(function () { return { enabled: false, currentAlpha: 0, targetAlpha: 0 }; });
 
         document.getElementById('multiple-exposure-viewer-title').textContent = proof.id.replace(/_/g, ' ');
 
@@ -176,26 +176,9 @@
             btn.title = name;
             overlayBtns.push(btn);
             (function (idx) {
-                btn.addEventListener('pointerenter', function () {
-                    if (window.matchMedia('(hover: none)').matches) return;
-                    overlaySettings[idx].hovering = true;
-                    btn.classList.toggle('comparing', overlaySettings[idx].enabled && !overlaySettings[idx].suppressComparing);
-                    setTargetAlpha(idx);
-                });
-                btn.addEventListener('pointerleave', function () {
-                    if (window.matchMedia('(hover: none)').matches) return;
-                    overlaySettings[idx].hovering = false;
-                    overlaySettings[idx].suppressComparing = false;
-                    btn.classList.remove('comparing');
-                    setTargetAlpha(idx);
-                });
                 btn.addEventListener('click', function () {
                     overlaySettings[idx].enabled = !overlaySettings[idx].enabled;
                     btn.classList.toggle('active', overlaySettings[idx].enabled);
-                    if (overlaySettings[idx].enabled) {
-                        overlaySettings[idx].suppressComparing = true;
-                    }
-                    btn.classList.remove('comparing');
                     updateSelectAllBtn(selectAllBtn);
                     setTargetAlpha(idx);
                 });
@@ -208,10 +191,7 @@
             var enable = !allEnabled;
             overlaySettings.forEach(function (s, idx) {
                 s.enabled = enable;
-                s.suppressComparing = enable;
-                s.hovering = false;
                 overlayBtns[idx].classList.toggle('active', enable);
-                overlayBtns[idx].classList.remove('comparing');
                 setTargetAlpha(idx);
             });
             updateSelectAllBtn(selectAllBtn);
@@ -269,8 +249,7 @@
 
     function setTargetAlpha(idx) {
         var s = overlaySettings[idx];
-        var effectiveHovering = s.hovering && !s.suppressComparing;
-        s.targetAlpha = (s.enabled !== effectiveHovering) ? 1.0 : 0.0;
+        s.targetAlpha = s.enabled ? 1.0 : 0.0;
         if (animFrameId !== null) cancelAnimationFrame(animFrameId);
         lastTimestamp = null;
         animFrameId = requestAnimationFrame(animationStep);
