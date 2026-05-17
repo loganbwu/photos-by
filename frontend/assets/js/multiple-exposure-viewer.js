@@ -2,6 +2,7 @@
     'use strict';
 
     var baseUrl = '';
+    var allProofs = [];
     var currentProof = null;
     var baseImage = null;
     var overlayImages = [];
@@ -14,6 +15,7 @@
     function initMultipleExposureViewer(proofs, galleryBaseUrl) {
         if (!proofs || proofs.length === 0) return;
         baseUrl = galleryBaseUrl;
+        allProofs = proofs;
         renderExposuresSection(proofs);
         createModal();
     }
@@ -109,7 +111,12 @@
 
         document.getElementById('multiple-exposure-viewer-close').addEventListener('click', closeModal);
         modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
-        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { closeModal(); return; }
+            if (!currentProof) return;
+            if (e.key === 'ArrowLeft')  { e.preventDefault(); navigateProof(-1); }
+            if (e.key === 'ArrowRight') { e.preventDefault(); navigateProof(1); }
+        });
     }
 
     function openExposureViewer(proof) {
@@ -318,6 +325,14 @@
 
         ctx.globalAlpha = 1.0;
         ctx.globalCompositeOperation = 'source-over';
+    }
+
+    function navigateProof(delta) {
+        var idx = allProofs.findIndex(function (p) { return p.id === currentProof.id; });
+        if (idx === -1) return;
+        var newIdx = idx + delta;
+        if (newIdx < 0 || newIdx >= allProofs.length) return;
+        openExposureViewer(allProofs[newIdx]);
     }
 
     function closeModal() {
