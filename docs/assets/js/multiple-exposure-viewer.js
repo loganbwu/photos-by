@@ -76,7 +76,7 @@
 
         var albumViewer = document.getElementById('album-viewer');
         if (albumViewer && albumViewer.parentNode) {
-            albumViewer.parentNode.insertBefore(section, albumViewer.nextSibling);
+            albumViewer.parentNode.insertBefore(section, albumViewer);
         }
     }
 
