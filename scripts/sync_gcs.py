@@ -366,6 +366,7 @@ def main():
                 for file_info in files_to_upload:
                     gcs_path = f"{file_info['folder'].lower()}/{file_info['name']}"
                     blob = bucket.blob(gcs_path)
+                    blob.cache_control = 'public, max-age=3600'
                     blob.upload_from_filename(file_info['local_path'])
                     blob.make_public()
                     pbar.update(1)
