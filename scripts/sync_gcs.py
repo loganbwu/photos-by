@@ -372,7 +372,22 @@ def main():
                     pbar.update(1)
         else:
             print("\nNo files need uploading - all are identical to GCS versions.")
-        
+
+        # Patch cache-control on any existing image blobs that are missing it
+        TARGET_CACHE = 'public, max-age=3600'
+        blobs_to_patch = [
+            blob for blob in gcs_blobs
+            if blob.name.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))
+            and blob.cache_control != TARGET_CACHE
+        ]
+        if blobs_to_patch:
+            print(f"\nPatching cache-control on {len(blobs_to_patch)} existing image(s)...")
+            with tqdm(total=len(blobs_to_patch), desc="Patching cache-control", unit="file") as pbar:
+                for blob in blobs_to_patch:
+                    blob.cache_control = TARGET_CACHE
+                    blob.patch()
+                    pbar.update(1)
+
         # Generate and upload manifests for all folders (check for changes first)
         print(f"\nChecking manifests for {len(client_folders)} folders...")
         manifests_to_upload = []
