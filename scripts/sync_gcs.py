@@ -112,6 +112,21 @@ def get_exif_date(image_bytes):
         pass
     return None
 
+_FLASH_TAG = 37385  # ExifIFD.Flash
+
+
+def get_flash(image_bytes):
+    """Returns True if flash fired, False if not, None on failure."""
+    try:
+        img = Image.open(BytesIO(image_bytes))
+        exif_data = img._getexif()
+        if exif_data and _FLASH_TAG in exif_data:
+            return bool(int(exif_data[_FLASH_TAG]) & 0x01)
+    except Exception:
+        pass
+    return None
+
+
 def get_keywords(image_bytes):
     """
     Extracts IPTC keywords from image bytes.
@@ -139,39 +154,38 @@ def get_keywords(image_bytes):
 
 def build_proofs_for_folder(image_list):
     """
-    Groups images by composition keyword and builds a proofs list.
+    Groups images tagged with 'multiple_exposure' into proofs using flash metadata.
 
-    Keywords must start with seq_, e.g. seq_01, seq_paint_01, seq_fire_02.
-    This prefix is intentionally specific to avoid collisions with other
-    tagging conventions (e.g. person names like alice_01).
+    Images are already sorted by capture time. Flash-fired images become bases;
+    subsequent non-flash images become overlays for the last flash base. This
+    mirrors the tethering viewer's compute_series logic, removing the need to
+    manually tag each image with a sequence ID (seq_01, seq_02, etc.).
 
-    Within each group, images are already sorted by capture time, so the
-    first image is the base exposure and the rest are light-painting overlays.
-
-    Returns a list of proof dicts, or an empty list if no matching keywords
-    are found. Albums without seq_-tagged images are unaffected.
+    If no flash data is found among the tagged images, each is returned as a
+    standalone base with no overlays.
     """
-    sequence_groups = {}
-    for file_info in image_list:
-        keywords = file_info.get('keywords', [])
-        for kw in keywords:
-            if kw.lower().startswith('seq_'):
-                seq_id = kw.lower()
-                if seq_id not in sequence_groups:
-                    sequence_groups[seq_id] = []
-                sequence_groups[seq_id].append(file_info)
-                break  # Use only the first matching sequence keyword per image
+    me_images = [
+        img for img in image_list
+        if any(kw.lower() == 'multiple_exposure' for kw in img.get('keywords', []))
+    ]
+    if not me_images:
+        return []
+
+    has_flash = any(img.get('flash') for img in me_images)
+    if not has_flash:
+        return [
+            {'id': img['name'].rsplit('.', 1)[0], 'base': img['name'], 'overlays': []}
+            for img in me_images
+        ]
 
     proofs = []
-    for seq_id in sorted(sequence_groups.keys()):
-        group = sequence_groups[seq_id]
-        if not group:
-            continue
-        proofs.append({
-            'id': seq_id,
-            'base': group[0]['name'],
-            'overlays': [img['name'] for img in group[1:]]
-        })
+    current = None
+    for img in me_images:
+        if img.get('flash'):
+            current = {'id': img['name'].rsplit('.', 1)[0], 'base': img['name'], 'overlays': []}
+            proofs.append(current)
+        elif current is not None:
+            current['overlays'].append(img['name'])
     return proofs
 
 
@@ -241,6 +255,7 @@ def main():
 
             file_info["timestamp"] = exif_date or mod_time
             file_info["keywords"] = get_keywords(image_bytes)
+            file_info["flash"] = get_flash(image_bytes)
             images_by_folder[file_info["folder"]].append(file_info)
             pbar.update(1)
 
