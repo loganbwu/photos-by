@@ -1,6 +1,6 @@
 # Pole Dance Artistry Media
 
-Thank you for making Pole Dance Artistry at Viva (24 May 2025) unforgettable!
+Thank you for making Pole Dance Artistry at Viva (24 May 2025) unforgettable! This page contains details on how to access your media.
 
 ## Miscellaneous media
 
