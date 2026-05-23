@@ -409,7 +409,8 @@ footer .copyright {
 /* Button Styles */
 button,
 input[type="submit"],
-input[type="button"] {
+input[type="button"],
+a.btn {
     font-family: 'Oswald', sans-serif;
     text-transform: uppercase;
     font-size: 1em;
@@ -419,12 +420,15 @@ input[type="button"] {
     padding: 10px 20px;
     cursor: pointer;
     transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+    display: inline-block;
+    text-decoration: none;
 }
 
 @media (hover: hover) {
     button:hover,
     input[type="submit"]:hover,
-    input[type="button"]:hover {
+    input[type="button"]:hover,
+    a.btn:hover {
         background-color: var(--white);
         border-color: var(--white);
         color: var(--black);
