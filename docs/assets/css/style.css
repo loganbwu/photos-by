@@ -648,8 +648,8 @@ table tr:nth-child(even) {
     background: none;
     border: 1px solid #555;
     color: var(--white);
-    font-size: 0.9em;
-    padding: 4px 8px;
+    font-size: 0.7em;
+    padding: 4px 6px;
     line-height: 1;
     cursor: pointer;
     text-transform: uppercase;
