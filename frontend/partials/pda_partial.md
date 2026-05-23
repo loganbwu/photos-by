@@ -28,18 +28,16 @@ Name: Logan Wu Business\
 BSB: 062-692\
 Account: 8299 8746
 
-Instagram handles of the media team:\
-<a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a> (feel free to tag me)\
-<a href="https://instagram.com/thigh_bruise" target="_blank">@thigh_bruise</a>\
-<a href="https://instagram.com/gillybeanbag" target="_blank">@gillybeanbag</a>
-<a href="https://instagram.com/agathe.white" target="_blank">@agathe_.white</a>
+## Order form
+
+<a href="https://docs.google.com/forms/d/e/1FAIpQLSdb0TB3HWu0wzXdpxS7HqgdJyDHOE59kt6DskjTmu97JXpa9Q/viewform?usp=dialog" target="_blank" class="btn">Open order form</a>
 
 ## Next event promotion
 
 Did you enjoy your experience with me and my team at this event? If I shoot for an event organiser based on your referral, you (or a person of your choice) will receive your event media for free.
 
-## Order form
-
-If the form below does not load, please click <a href="https://docs.google.com/forms/d/e/1FAIpQLSdb0TB3HWu0wzXdpxS7HqgdJyDHOE59kt6DskjTmu97JXpa9Q/viewform?usp=dialog" target="_blank">here</a>.
-
-<iframe src="https://docs.google.com/forms/d/e/1FAIpQLSdb0TB3HWu0wzXdpxS7HqgdJyDHOE59kt6DskjTmu97JXpa9Q/viewform?embedded=true" width="100%" height="2600" frameborder="0" marginheight="0" marginwidth="0">Loading…</iframe>
+Instagram handles of the media team:\
+<a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a> (feel free to tag me)\
+<a href="https://instagram.com/thigh_bruise" target="_blank">@thigh_bruise</a>\
+<a href="https://instagram.com/gillybeanbag" target="_blank">@gillybeanbag</a>
+<a href="https://instagram.com/agathe.white" target="_blank">@agathe_.white</a>
