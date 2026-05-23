@@ -36,7 +36,8 @@ Note: your bank may not recognise the account name exactly as written here - thi
 
 Did you enjoy your experience with me and my team at this event? If I shoot for an event organiser based on your referral, you (or a person of your choice) will receive your event media for free.
 
-Instagram handles of the media team:\
+## Instagram handles of the media team:
+
 <a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a> (feel free to tag me)\
 <a href="https://instagram.com/thigh_bruise" target="_blank">@thigh_bruise</a>\
 <a href="https://instagram.com/gillybeanbag" target="_blank">@gillybeanbag</a>\
