@@ -424,6 +424,11 @@ a.btn {
     text-decoration: none;
 }
 
+a.btn-lg {
+    font-size: 1.4em;
+    padding: 16px 36px;
+}
+
 @media (hover: hover) {
     button:hover,
     input[type="submit"]:hover,

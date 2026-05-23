@@ -28,7 +28,7 @@ Name: Logan Wu Business\
 BSB: 062-692\
 Account: 8299 8746
 
-<a href="https://docs.google.com/forms/d/e/1FAIpQLSdb0TB3HWu0wzXdpxS7HqgdJyDHOE59kt6DskjTmu97JXpa9Q/viewform?usp=dialog" target="_blank" class="btn">Go to order form</a>
+<a href="https://docs.google.com/forms/d/e/1FAIpQLSdb0TB3HWu0wzXdpxS7HqgdJyDHOE59kt6DskjTmu97JXpa9Q/viewform?usp=dialog" target="_blank" class="btn btn-lg">Go to order form</a>
 
 ## Next event promotion
 
