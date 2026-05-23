@@ -28,6 +28,8 @@ Name: Logan Wu Business\
 BSB: 062-692\
 Account: 8299 8746
 
+Note: your bank may not recognise the account name exactly as written here - this is normal.
+
 <a href="https://docs.google.com/forms/d/e/1FAIpQLSdb0TB3HWu0wzXdpxS7HqgdJyDHOE59kt6DskjTmu97JXpa9Q/viewform?usp=dialog" target="_blank" class="btn btn-lg">Go to order form</a>
 
 ## Next event promotion
@@ -37,5 +39,5 @@ Did you enjoy your experience with me and my team at this event? If I shoot for 
 Instagram handles of the media team:\
 <a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a> (feel free to tag me)\
 <a href="https://instagram.com/thigh_bruise" target="_blank">@thigh_bruise</a>\
-<a href="https://instagram.com/gillybeanbag" target="_blank">@gillybeanbag</a>
+<a href="https://instagram.com/gillybeanbag" target="_blank">@gillybeanbag</a>\
 <a href="https://instagram.com/agathe.white" target="_blank">@agathe_.white</a>
