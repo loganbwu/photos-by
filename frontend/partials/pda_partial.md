@@ -36,7 +36,7 @@ Note: your bank may not recognise the account name exactly as written here - thi
 
 Did you enjoy your experience with me and my team at this event? If I shoot for an event organiser based on your referral, you (or a person of your choice) will receive your event media for free.
 
-## Instagram handles of the media team:
+## Instagram handles
 
 Thank you to my team for their support! I love being tagged on Instagram, and you can also tag my team members.
 
