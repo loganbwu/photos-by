@@ -2,12 +2,6 @@
 
 Thank you for making Pole Dance Artistry at Viva Melbourne (24 May 2026) unforgettable! This page contains details on how to access your media.
 
-## Miscellaneous media
-
-Non-performance media (venue, prizegiving, etc) is free to preview and download. Links will be available here after the event.
-
-<!-- Non-performance media (venue, prizegiving, etc) is free to preview <a href="https://photosby.loganwu.co.nz/albums/?album=00_miscellaneous_pda" target="_blank">here</a> and download via Google Drive <a href="" target="_blank">here</a>. -->
-
 ## How to order performance media
 
 If you have not seen your photo previews, please get in touch for your link (<a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a> on Instagram or <a href="mailto:loganbwu@gmail.com">loganbwu@gmail.com</a>).
@@ -44,3 +38,7 @@ Thank you to my team for their support! I love being tagged on Instagram, and yo
 <a href="https://instagram.com/thigh_bruise" target="_blank">@thigh_bruise</a>\
 <a href="https://instagram.com/gillybeanbag" target="_blank">@gillybeanbag</a>\
 <a href="https://instagram.com/agathe.white" target="_blank">@agathe.white</a>
+
+## Miscellaneous media
+
+Non-performance media (venue, prizegiving, etc) is free to preview <a href="https://photosby.loganwu.co.nz/albums/?album=00_miscellaneous_pda" target="_blank">here</a> and download via Google Drive <a href="" target="_blank">here</a>.
