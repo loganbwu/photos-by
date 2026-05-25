@@ -11,7 +11,7 @@ There are four purchase options:
 | Option | Price |
 |--------|-------|
 | Per photo (if ordering individually) | $15 |
-| Video edit | $35 |
+| Video edit (on demand) | $35 |
 | All photos | $75 |
 | All photos + video edit | $95 |
 
