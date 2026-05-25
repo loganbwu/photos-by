@@ -41,4 +41,4 @@ Thank you to my team for their support! I love being tagged on Instagram, and yo
 
 ## Miscellaneous media
 
-Non-performance media (venue, prizegiving, etc) is free to preview <a href="https://photosby.loganwu.co.nz/albums/?album=00_miscellaneous_pda" target="_blank">here</a> and download via Google Drive <a href="" target="_blank">here</a>.
+Non-performance media (venue, prizegiving, etc) is free to preview <a href="https://photosby.loganwu.co.nz/albums/?album=00_miscellaneous_pda" target="_blank">here</a> and download via Google Drive <a href="https://drive.google.com/drive/folders/1t78jLz-t9ypCV0DRaX3wplCgHGEDU5fK?usp=drive_link" target="_blank">here</a>.
