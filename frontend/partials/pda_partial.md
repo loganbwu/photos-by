@@ -26,6 +26,8 @@ Note: your bank may not recognise the account name exactly as written here - thi
 
 <a href="https://docs.google.com/forms/d/e/1FAIpQLSdb0TB3HWu0wzXdpxS7HqgdJyDHOE59kt6DskjTmu97JXpa9Q/viewform?usp=dialog" target="_blank" class="btn btn-lg">Go to order form</a>
 
+After you submit the form, I will email you with a Google Drive download link.
+
 ## Next event promotion
 
 Did you enjoy your experience with me and my team at this event? If I shoot for an event organiser based on your referral, you (or a person of your choice) will receive your event media for free.
