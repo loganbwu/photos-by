@@ -1,6 +1,6 @@
 # Pole Dance Artistry Media
 
-Thank you for making Pole Dance Artistry at Viva Melbourne (24 May 2026) unforgettable! This page contains details on how to access your media.
+Thank you for making Pole Dance Artistry unforgettable! This page contains details on how to access your media.
 
 ## How to order performance media
 
