@@ -52,6 +52,16 @@ def get_capture_time(path: Path) -> datetime | None:
     return None
 
 
+def _pick_encoder() -> list[str]:
+    result = subprocess.run(['ffmpeg', '-encoders', '-v', 'quiet'],
+                            capture_output=True, text=True)
+    if 'h264_videotoolbox' in result.stdout:
+        print("Encoder: h264_videotoolbox (hardware)")
+        return ['-c:v', 'h264_videotoolbox', '-q:v', '65']
+    print("Encoder: libx264 ultrafast (software)")
+    return ['-c:v', 'libx264', '-preset', 'ultrafast']
+
+
 def make_slideshow(folder: Path, output: Path, tail: float | None) -> None:
     if not shutil.which('ffmpeg'):
         print("ffmpeg not found on PATH. Install it with: brew install ffmpeg")
@@ -99,12 +109,13 @@ def make_slideshow(folder: Path, output: Path, tail: float | None) -> None:
             # ffconcat requires the last entry repeated without a duration
             f.write(f"file '{entries[-1][1].resolve()}'\n")
 
+        encoder = _pick_encoder()
         cmd = [
             'ffmpeg', '-y',
             '-f', 'concat', '-safe', '0', '-i', str(concat_file),
             '-vf', 'scale=-2:1920,crop=1080:1920,format=yuv420p',
             '-pix_fmt', 'yuv420p',
-            '-c:v', 'libx264',
+            *encoder,
             str(output),
         ]
         print('Running:', ' '.join(cmd))
