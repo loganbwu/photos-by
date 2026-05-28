@@ -102,7 +102,7 @@ def make_slideshow(folder: Path, output: Path, tail: float | None) -> None:
         cmd = [
             'ffmpeg', '-y',
             '-f', 'concat', '-safe', '0', '-i', str(concat_file),
-            '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',  # x264 requires even dimensions
+            '-vf', 'scale=-2:1920,crop=1080:1920,format=yuv420p',
             '-pix_fmt', 'yuv420p',
             '-c:v', 'libx264',
             str(output),
