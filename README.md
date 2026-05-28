@@ -147,6 +147,12 @@ The backend is a FastAPI application managed with [Rye](https://rye-up.com/) tha
 
 ### Publishing a New Private Gallery
 
+> **Pre-processing:** If you have a flat folder of Lightroom exports tagged with `NN_` keywords (e.g. `01_selects`, `02_edits`), `scripts/sort_by_tag.py` moves each image into a subfolder named after its tag. Photos with no matching tag or with multiple tags are skipped.
+> ```bash
+> cd backend && rye run sort-by-tag /path/to/lightroom/export
+> ```
+> Requires `Pillow` (already a backend dependency).
+
 1.  **Create a Client Folder:** Inside `backend/gcs_local_staging/`, create a new folder. The folder name will be the gallery password (e.g., `client-jane-doe`).
 2.  **Add Photos:** Copy the client's photos into the new folder.
 3.  **Sync to GCS:** From the `backend` directory, run the sync script:
