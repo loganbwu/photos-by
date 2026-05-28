@@ -145,6 +145,20 @@ The backend is a FastAPI application managed with [Rye](https://rye-up.com/) tha
     ```
     The application will be accessible at `http://localhost:8001`.
 
+### Creating a Slideshow for Event Sync
+
+`scripts/make_slideshow.py` takes a folder of images and produces an MP4 where each photo holds until the next one, timed by EXIF capture date (`DateTimeOriginal`). The output can be dropped into a video editor alongside footage from the same event to sync shots to the timeline.
+
+```bash
+cd backend && rye run make-slideshow /path/to/photos [output.mp4] [--tail SECONDS]
+```
+
+- **`--tail`** — hold duration for the final image (default: same as the last interval)
+- Requires `ffmpeg` on PATH (`brew install ffmpeg`)
+- Uses `DateTimeOriginal` from EXIF, which Lightroom preserves on export
+
+---
+
 ### Publishing a New Private Gallery
 
 > **Pre-processing:** If you have a flat folder of Lightroom exports tagged with `NN_` keywords (e.g. `01_selects`, `02_edits`), `scripts/sort_by_tag.py` moves each image into a subfolder named after its tag. Photos with no matching tag or with multiple tags are skipped.
