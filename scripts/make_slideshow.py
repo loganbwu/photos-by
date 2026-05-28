@@ -57,7 +57,7 @@ def make_slideshow(folder: Path, output: Path, tail: float | None) -> None:
         print("ffmpeg not found on PATH. Install it with: brew install ffmpeg")
         sys.exit(1)
 
-    files = sorted(p for p in folder.iterdir() if p.suffix.lower() in IMAGE_EXTS)
+    files = sorted(p for p in folder.rglob('*') if p.suffix.lower() in IMAGE_EXTS)
     if not files:
         print("No images found.")
         sys.exit(1)
