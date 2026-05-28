@@ -24,9 +24,18 @@ IMAGE_EXTS = {'.jpg', '.jpeg', '.tif', '.tiff', '.png'}
 
 # EXIF tag IDs
 _EXIF_IFD = 0x8769       # pointer to the Exif sub-IFD inside the main IFD
-_TAG_DTO = 36867          # DateTimeOriginal  — original shutter time, preserved by Lightroom
-_TAG_DTD = 36868          # DateTimeDigitized
-_TAG_DT  = 306            # DateTime          — may reflect Lightroom export time
+_TAG_DTO    = 36867  # DateTimeOriginal  — original shutter time, preserved by Lightroom
+_TAG_DTD    = 36868  # DateTimeDigitized
+_TAG_DT     = 306    # DateTime          — may reflect Lightroom export time
+_TAG_SSDTO  = 37521  # SubSecTimeOriginal
+_TAG_SSDTD  = 37522  # SubSecTimeDigitized
+
+
+def _parse_subsec(raw: str | None) -> int:
+    """Convert a SubSec string (e.g. '980', '75') to microseconds."""
+    if not raw:
+        return 0
+    return int(raw.ljust(6, '0')[:6])
 
 
 def get_capture_time(path: Path) -> datetime | None:
@@ -35,11 +44,12 @@ def get_capture_time(path: Path) -> datetime | None:
             exif = img.getexif()
             exif_ifd = exif.get_ifd(_EXIF_IFD)
 
-        for tag_id in (_TAG_DTO, _TAG_DTD):
-            raw = exif_ifd.get(tag_id)
+        for dt_tag, subsec_tag in ((_TAG_DTO, _TAG_SSDTO), (_TAG_DTD, _TAG_SSDTD)):
+            raw = exif_ifd.get(dt_tag)
             if raw:
                 try:
-                    return datetime.strptime(raw[:19], '%Y:%m:%d %H:%M:%S')
+                    dt = datetime.strptime(raw[:19], '%Y:%m:%d %H:%M:%S')
+                    return dt.replace(microsecond=_parse_subsec(exif_ifd.get(subsec_tag)))
                 except ValueError:
                     pass
 
@@ -80,7 +90,7 @@ def make_slideshow(folder: Path, output: Path, tail: float | None, limit: int | 
         if ts is None:
             print(f"  SKIP (no timestamp): {f.name}")
         else:
-            print(f"  {ts.strftime('%Y-%m-%d %H:%M:%S')}  {f.name}")
+            print(f"  {ts.strftime('%Y-%m-%d %H:%M:%S')}.{ts.microsecond // 1000:03d}  {f.name}")
             entries.append((ts, f))
 
     if len(entries) < 2:
