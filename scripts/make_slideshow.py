@@ -126,6 +126,7 @@ def make_slideshow(folder: Path, output: Path, tail: float | None, limit: int | 
         encoder = _pick_encoder()
         cmd = [
             'ffmpeg', '-y',
+            '-hide_banner', '-loglevel', 'error', '-stats',
             '-f', 'concat', '-safe', '0', '-i', str(concat_file),
             '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,format=yuv420p',
             '-pix_fmt', 'yuv420p',
