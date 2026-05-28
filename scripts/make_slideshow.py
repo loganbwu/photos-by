@@ -62,7 +62,7 @@ def _pick_encoder() -> list[str]:
     return ['-c:v', 'libx264', '-preset', 'ultrafast']
 
 
-def make_slideshow(folder: Path, output: Path, tail: float | None) -> None:
+def make_slideshow(folder: Path, output: Path, tail: float | None, limit: int | None = None) -> None:
     if not shutil.which('ffmpeg'):
         print("ffmpeg not found on PATH. Install it with: brew install ffmpeg")
         sys.exit(1)
@@ -88,6 +88,10 @@ def make_slideshow(folder: Path, output: Path, tail: float | None) -> None:
         sys.exit(1)
 
     entries.sort(key=lambda x: x[0])
+
+    if limit is not None:
+        entries = entries[:limit]
+        print(f"(--test: using first {len(entries)} images)\n")
 
     durations: list[float] = []
     for i in range(len(entries) - 1):
@@ -139,6 +143,8 @@ def main() -> None:
     parser.add_argument('--tail', type=float, default=None,
                         help='Hold duration for the final image in seconds '
                              '(default: same as the last interval)')
+    parser.add_argument('--test', action='store_true',
+                        help='Stop after the first 10 images')
     args = parser.parse_args()
 
     folder = args.folder.expanduser().resolve()
@@ -147,7 +153,7 @@ def main() -> None:
         sys.exit(1)
 
     output = args.output or folder.parent / (folder.name + '_slideshow.mp4')
-    make_slideshow(folder, output, args.tail)
+    make_slideshow(folder, output, args.tail, limit=10 if args.test else None)
 
 
 if __name__ == '__main__':
