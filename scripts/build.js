@@ -16,7 +16,7 @@ const PHOTOS_BUILD_DIR = path.join(BUILD_DIR, 'photos');
 
 const TEMPLATE_FILE = 'base.html.template';
 
-// Partials are auto-discovered from frontend/partials/*_partial.{html,md}.
+// Partials are auto-discovered from frontend/partials/*.{html,md}.
 // PAGES entries without a matching partial will warn; discovered partials without
 // a matching PAGES entry will get a default page at {slug}/index.html.
 const PAGES = [
@@ -106,9 +106,9 @@ const PAGES = [
 
 // --- Helper Functions ---
 
-// "first_shoot_partial.html" -> "firstShoot"
+// "first_shoot.html" -> "firstShoot"
 function filenameToKey(filename) {
-    const slug = filename.replace(/_partial\.(html|md)$/, '');
+    const slug = filename.replace(/\.(html|md)$/, '');
     return slug.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
 }
 
@@ -189,7 +189,7 @@ function generateGalleryHTML(imageFiles) {
 
 async function loadPartials() {
     const files = await fs.readdir(SRC_DIR.partials);
-    const partialFiles = files.filter(f => /_partial\.(html|md)$/.test(f));
+    const partialFiles = files.filter(f => /\.(html|md)$/.test(f));
     const loadedPartials = {};
     for (const filename of partialFiles) {
         const key = filenameToKey(filename);
