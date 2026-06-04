@@ -72,7 +72,7 @@ def _pick_encoder() -> list[str]:
     return ['-c:v', 'libx264', '-preset', 'ultrafast']
 
 
-def make_slideshow(folder: Path, output: Path, tail: float | None, limit: int | None = None) -> None:
+def make_slideshow(folder: Path, output: Path, tail: float | None, interval: float | None = None, limit: int | None = None) -> None:
     if not shutil.which('ffmpeg'):
         print("ffmpeg not found on PATH. Install it with: brew install ffmpeg")
         sys.exit(1)
@@ -84,31 +84,45 @@ def make_slideshow(folder: Path, output: Path, tail: float | None, limit: int | 
 
     print(f"Found {len(files)} image(s) in {folder}\n")
 
-    entries: list[tuple[datetime, Path]] = []
-    for f in files:
-        ts = get_capture_time(f)
-        if ts is None:
-            print(f"  SKIP (no timestamp): {f.name}")
-        else:
-            print(f"  {ts.strftime('%Y-%m-%d %H:%M:%S')}.{ts.microsecond // 1000:03d}  {f.name}")
-            entries.append((ts, f))
+    if interval is not None:
+        # Fixed-interval mode: no EXIF timestamps needed
+        ordered = [(None, f) for f in files]
+        if limit is not None:
+            ordered = ordered[:limit]
+            print(f"(--test: using first {len(ordered)} images)\n")
+        n = len(ordered)
+        if n < 1:
+            print("\nNeed at least 1 image.")
+            sys.exit(1)
+        durations = [interval] * n
+        durations[-1] = tail if tail is not None else interval
+        entries = ordered
+    else:
+        entries: list[tuple[datetime, Path]] = []
+        for f in files:
+            ts = get_capture_time(f)
+            if ts is None:
+                print(f"  SKIP (no timestamp): {f.name}")
+            else:
+                print(f"  {ts.strftime('%Y-%m-%d %H:%M:%S')}.{ts.microsecond // 1000:03d}  {f.name}")
+                entries.append((ts, f))
 
-    if len(entries) < 2:
-        print("\nNeed at least 2 images with readable timestamps.")
-        sys.exit(1)
+        if len(entries) < 2:
+            print("\nNeed at least 2 images with readable timestamps.")
+            sys.exit(1)
 
-    entries.sort(key=lambda x: x[0])
+        entries.sort(key=lambda x: x[0])
 
-    if limit is not None:
-        entries = entries[:limit]
-        print(f"(--test: using first {len(entries)} images)\n")
+        if limit is not None:
+            entries = entries[:limit]
+            print(f"(--test: using first {len(entries)} images)\n")
 
-    durations: list[float] = []
-    for i in range(len(entries) - 1):
-        delta = (entries[i + 1][0] - entries[i][0]).total_seconds()
-        durations.append(max(delta, 0.001))  # guard against identical timestamps
+        durations: list[float] = []
+        for i in range(len(entries) - 1):
+            delta = (entries[i + 1][0] - entries[i][0]).total_seconds()
+            durations.append(max(delta, 0.001))  # guard against identical timestamps
 
-    durations.append(tail if tail is not None else durations[-1])
+        durations.append(tail if tail is not None else durations[-1])
 
     print(f"\nDurations: {[f'{d:.1f}s' for d in durations]}")
     print(f"Total:     {sum(durations):.1f}s\n")
@@ -154,6 +168,9 @@ def main() -> None:
     parser.add_argument('--tail', type=float, default=None,
                         help='Hold duration for the final image in seconds '
                              '(default: same as the last interval)')
+    parser.add_argument('--interval', type=float, default=None,
+                        help='Fixed hold duration for every image in seconds '
+                             '(skips EXIF timestamp reading)')
     parser.add_argument('--test', action='store_true',
                         help='Stop after the first 10 images')
     args = parser.parse_args()
@@ -164,7 +181,7 @@ def main() -> None:
         sys.exit(1)
 
     output = args.output or folder.parent / (folder.name + '_slideshow.mp4')
-    make_slideshow(folder, output, args.tail, limit=10 if args.test else None)
+    make_slideshow(folder, output, args.tail, interval=args.interval, limit=10 if args.test else None)
 
 
 if __name__ == '__main__':
