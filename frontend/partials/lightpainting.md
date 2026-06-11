@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Hi, if you're reading this, you're probably scheduled to shoot with me at Pole Haven on May 16th. Thanks for booking and I'm really excited to see you!
+Hi, if you're reading this, you're probably scheduled to shoot with me at Kylie J Geelong on July 11th. Thanks for booking and I'm really excited to see you!
 
 Normally I send some basic information about the shoot and we have a quick briefing in the studio. However, shooting with light painting requires some special preparation and by having this briefing ahead of time, we can maximise our shooting time.
 
