@@ -145,6 +145,21 @@ The backend is a FastAPI application managed with [Rye](https://rye-up.com/) tha
     ```
     The application will be accessible at `http://localhost:8001`.
 
+### Stitching GoPro Chapter Files
+
+GoPro cameras split long recordings into ~4 GB chapter files. `scripts/stitch_gopro.py` detects which files belong to the same recording and concatenates them into single output files using ffmpeg stream copy (no re-encoding, lossless).
+
+```bash
+cd backend && rye run stitch-gopro /path/to/gopro/folder [output_folder]
+```
+
+- Output folder defaults to `<folder>/stitched`
+- Supports newer naming (`GX010001.MP4`, `GX020001.MP4`, ...) and older (`GOPR0001.MP4`, `GP010001.MP4`, ...)
+- Single-chapter clips are skipped (nothing to stitch)
+- Requires `ffmpeg` on PATH (`brew install ffmpeg`)
+
+---
+
 ### Creating a Slideshow for Event Sync
 
 `scripts/make_slideshow.py` takes a folder of images and produces an MP4 where each photo holds until the next one, timed by EXIF capture date (`DateTimeOriginal`). The output can be dropped into a video editor alongside footage from the same event to sync shots to the timeline.
