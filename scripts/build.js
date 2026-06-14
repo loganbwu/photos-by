@@ -191,14 +191,21 @@ async function loadPartials() {
     const files = await fs.readdir(SRC_DIR.partials);
     const partialFiles = files.filter(f => /\.(html|md)$/.test(f));
     const loadedPartials = {};
+    const partialTitles = {};
     for (const filename of partialFiles) {
         const key = filenameToKey(filename);
         const partialPath = path.join(SRC_DIR.partials, filename);
         const isCritical = key === 'header' || key === 'footer';
         const content = await readFileContent(partialPath, isCritical);
-        loadedPartials[key] = filename.endsWith('.md') ? `<article id="${key}">${marked(content)}</article>` : content;
+        if (filename.endsWith('.md')) {
+            const h1Match = content.match(/^#\s+(.+)/m);
+            if (h1Match) partialTitles[key] = h1Match[1].trim();
+            loadedPartials[key] = `<article id="${key}">${marked(content)}</article>`;
+        } else {
+            loadedPartials[key] = content;
+        }
     }
-    return loadedPartials;
+    return { partials: loadedPartials, partialTitles };
 }
 
 // --- Main Build Logic ---
@@ -219,7 +226,7 @@ async function buildSite() {
     const baseTemplateContent = await readFileContent(baseTemplatePath);
     if (!baseTemplateContent) return;
 
-    const partials = await loadPartials();
+    const { partials, partialTitles } = await loadPartials();
     if (!partials.header || !partials.footer) {
         console.error('Critical header or footer partial missing. Aborting build.');
         return;
@@ -238,7 +245,7 @@ async function buildSite() {
             pathPrefix: '../',
             homePathPrefix: '../',
             contentKey: key,
-            title: `${slugToTitle(slug)} | Photos by Logan`,
+            title: `${partialTitles[key] || slugToTitle(slug)} | Photos by Logan`,
             metaDescription: '',
         });
     }
