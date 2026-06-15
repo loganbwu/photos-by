@@ -42,4 +42,4 @@ Thank you to my team for their support! I love being tagged on Instagram, and yo
 
 ## Miscellaneous media
 
-Non-performance media (venue, prizegiving, etc) is free to preview <a href="https://photosby.loganwu.co.nz/albums/?album=00_miscellaneous_aapcvic" target="_blank">here</a> and download via Google Drive <a href="https://drive.google.com/drive/folders/1RBd1M0TDIwagVhWaeRbWcYPlliwHuwkf?usp=drive_link" target="_blank">here</a>.
+Non-performance media (venue, prizegiving, etc) are temporarily unavailable.
