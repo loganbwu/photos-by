@@ -35,7 +35,7 @@ Did you enjoy your experience with me and my team at this event? If I shoot for 
 Thank you to my team for their support! I love being tagged on Instagram, and you can also tag my team members.
 
 <a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a>\
-<a href="https://instagram.com/thigh_bruise" target="_blank">@thigh_bruise</a>\
+
 <a href="https://instagram.com/agathe.white" target="_blank">@agathe.white</a>
 
 ## Miscellaneous media
