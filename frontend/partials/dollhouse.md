@@ -45,7 +45,7 @@ Press the X or Escape to exit the expanded view.
 
 ## High quality downloads (Google Drive)
 
-Higher resolution and easier to download than the album viewer. Please tag <a href="https://www.instagram.com/photosby.loganwu/" target="_blank">@photosby.loganwu</a> on Instagram.
+Higher resolution and easier to download than the album viewer. Please feel free to tag <a href="https://www.instagram.com/photosby.loganwu/" target="_blank">@photosby.loganwu</a> on Instagram, and send me a message if you'd like to make a collaboration.
 
 - <a href="https://drive.google.com/drive/folders/17GTl2My3Nwqm9YczoS3vkdZJU5u5U_42" target="_blank">Miscellaneous</a>
 - <a href="https://drive.google.com/drive/folders/1tSUDTL6dKhHTbab7HUU46eUH7XDqcapB" target="_blank">Goldeneye</a>
