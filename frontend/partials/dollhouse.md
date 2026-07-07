@@ -4,7 +4,7 @@ July 5th, 2026
 
 ## Album viewer
 
-Click an image to expand.
+For quick browsing (lower quality). Click an image to expand.
 
 Use the left/right arrow keys, on-screen buttons, or swipe to navigate between images.
 
