@@ -51,7 +51,7 @@ Higher resolution and easier to download than the album viewer.
 
 Please use these high-quality downloads. Portrait/vertical-orientation photos are in 3:2 aspect ratio but in most cases are cropped so a 5:4 portion (Instagram's default aspect ratio) can be taken for Instagram. I recommend either sharing the original 3:2 image or a 5:4 crop. If you use square (1:1), it is likely that body parts will be cropped out.
 
-Please feel free to tag <a href="https://www.instagram.com/photosby.loganwu/" target="_blank">@photosby.loganwu</a> on Instagram, and send me a message if you'd like to make a collaboration (I would be happy with all of these photos being on my grid).
+Please feel free to tag <a href="https://www.instagram.com/photosby.loganwu/" target="_blank">@photosby.loganwu</a> on Instagram, and send me a message if you'd like to make a collaboration (I would be happy with any/all of these photos being on my grid).
 
 - <a href="https://drive.google.com/drive/folders/17GTl2My3Nwqm9YczoS3vkdZJU5u5U_42" target="_blank">Miscellaneous</a>
 - <a href="https://drive.google.com/drive/folders/1tSUDTL6dKhHTbab7HUU46eUH7XDqcapB" target="_blank">Goldeneye</a>
