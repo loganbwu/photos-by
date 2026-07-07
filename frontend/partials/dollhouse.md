@@ -47,14 +47,6 @@ Press the X or Escape to exit the expanded view.
 
 Higher resolution and easier to download than the album viewer.
 
-**Sharing to Instagram:**
-
-Please use these high-quality downloads. Portrait/vertical-orientation photos are in 3:2 aspect ratio but are composed so a 5:4 portion (Instagram's default aspect ratio) can be taken for Instagram (note: it is usually but not always the centre crop).
-
-I recommend either sharing the original 3:2 image or a 5:4 crop. If you use square (1:1), it is likely that body parts will be cropped out.
-
-Please feel free to tag <a href="https://www.instagram.com/photosby.loganwu/" target="_blank">@photosby.loganwu</a> on Instagram, and send me a message if you'd like to make a collaboration (I would be happy with any/all of these photos being on my grid).
-
 - <a href="https://drive.google.com/drive/folders/17GTl2My3Nwqm9YczoS3vkdZJU5u5U_42" target="_blank">Miscellaneous</a>
 - <a href="https://drive.google.com/drive/folders/1tSUDTL6dKhHTbab7HUU46eUH7XDqcapB" target="_blank">Goldeneye</a>
 - <a href="https://drive.google.com/drive/folders/1hhsS3Cy9ByEiGYAh5n1eTYPg6bgz4XKp" target="_blank">Run to You</a>
@@ -87,6 +79,14 @@ Please feel free to tag <a href="https://www.instagram.com/photosby.loganwu/" ta
 - <a href="https://drive.google.com/drive/folders/1e5-zi3jyyd1bDYA8bO5VTYl9pNl-60UK" target="_blank">The Valley</a>
 - <a href="https://drive.google.com/drive/folders/1sagFBoh_TXLnYqswBTRVFp0VZPH8MgTG" target="_blank">And I Am Telling You</a>
 - <a href="https://drive.google.com/drive/folders/17dZLyCeNfdvJEnCFP-NrzcbMlAP6AYnS" target="_blank">Come What May</a>
+
+**Sharing to Instagram:**
+
+Please use the high-quality Google Drive downloads. Portrait/vertical-orientation photos are in 3:2 aspect ratio but are composed so a 5:4 portion (Instagram's default aspect ratio) can be taken for Instagram (note: it is usually but not always the centre crop).
+
+I recommend either sharing the original 3:2 image or a 5:4 crop. If you use square (1:1), it is likely that body parts will be cropped out.
+
+Please feel free to tag <a href="https://www.instagram.com/photosby.loganwu/" target="_blank">@photosby.loganwu</a> on Instagram, and send me a message if you'd like to make a collaboration (I would be happy with any/all of these photos being on my grid).
 
 ## Next event promotion
 
