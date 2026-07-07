@@ -79,3 +79,15 @@ Higher resolution and easier to download than the album viewer. Please tag <a hr
 - <a href="https://drive.google.com/drive/folders/1e5-zi3jyyd1bDYA8bO5VTYl9pNl-60UK" target="_blank">The Valley</a>
 - <a href="https://drive.google.com/drive/folders/1sagFBoh_TXLnYqswBTRVFp0VZPH8MgTG" target="_blank">And I Am Telling You</a>
 - <a href="https://drive.google.com/drive/folders/17dZLyCeNfdvJEnCFP-NrzcbMlAP6AYnS" target="_blank">Come What May</a>
+
+## Next event promotion
+
+Did you enjoy your experience with me and my team at this event? If I shoot for an event organiser based on your referral, you (or a person of your choice) will receive your event media for free.
+
+## Instagram handles
+
+Thank you to my team for their support! I love being tagged on Instagram, and you can also tag my team members.
+
+<a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a>\
+<a href="https://instagram.com/thigh_bruise" target="_blank">@thigh_bruise</a>\
+<a href="https://instagram.com/agathe.white" target="_blank">@agathe.white</a>
