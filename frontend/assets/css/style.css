@@ -519,7 +519,8 @@ table tr:nth-child(even) {
     outline: none;
 }
 
-.exposure-card img {
+.exposure-card img,
+.exposure-card canvas {
     width: 100%;
     height: 150px;
     object-fit: cover;
@@ -746,7 +747,8 @@ table tr:nth-child(even) {
         min-height: 0;
     }
 
-    .exposure-card img {
+    .exposure-card img,
+    .exposure-card canvas {
         height: 120px;
     }
 }

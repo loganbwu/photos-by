@@ -152,6 +152,19 @@ def get_keywords(image_bytes):
         return []
 
 
+def get_flash_override(keywords):
+    """Returns an explicit flash-fired override from a 'flash_fired'/'flash_not_fired'
+    keyword (e.g. for an off-camera/wireless flash the camera's own EXIF Flash tag
+    never records as having fired). Returns None if neither keyword is present,
+    or if both are (ambiguous) -- callers should fall back to the EXIF value."""
+    lowered = {kw.lower() for kw in keywords}
+    fired = 'flash_fired' in lowered
+    not_fired = 'flash_not_fired' in lowered
+    if fired == not_fired:
+        return None
+    return fired
+
+
 def build_proofs_for_folder(image_list):
     """
     Builds proofs for the multiple exposure viewer.
@@ -251,7 +264,8 @@ def main():
 
             file_info["timestamp"] = exif_date or mod_time
             file_info["keywords"] = get_keywords(image_bytes)
-            file_info["flash"] = get_flash(image_bytes)
+            flash_override = get_flash_override(file_info["keywords"])
+            file_info["flash"] = flash_override if flash_override is not None else get_flash(image_bytes)
             images_by_folder[file_info["folder"]].append(file_info)
             pbar.update(1)
 

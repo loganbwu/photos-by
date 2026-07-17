@@ -46,9 +46,9 @@
             card.setAttribute('tabindex', '0');
             card.setAttribute('aria-label', 'Open compositor for ' + proof.id);
 
-            var img = document.createElement('img');
-            img.src = baseUrl + proof.base;
-            img.alt = proof.id;
+            var thumb = proof.overlays.length > 0
+                ? createCompositeThumbnail(proof)
+                : createPlainThumbnail(proof);
 
             var info = document.createElement('div');
             info.className = 'exposure-card-info';
@@ -63,7 +63,7 @@
 
             info.appendChild(idLabel);
             info.appendChild(countLabel);
-            card.appendChild(img);
+            card.appendChild(thumb);
             card.appendChild(info);
 
             card.addEventListener('click', function () { openExposureViewer(proof); });
@@ -80,6 +80,50 @@
         if (albumViewer && albumViewer.parentNode) {
             albumViewer.parentNode.insertBefore(section, albumViewer);
         }
+    }
+
+    function createPlainThumbnail(proof) {
+        var img = document.createElement('img');
+        img.src = baseUrl + proof.base;
+        img.alt = proof.id;
+        return img;
+    }
+
+    // Screen-blends the base with all its overlays on a canvas, the same way
+    // the modal viewer composites exposures, so the card thumbnail shows what
+    // the sequence actually looks like instead of just the base exposure.
+    function createCompositeThumbnail(proof) {
+        var canvas = document.createElement('canvas');
+        canvas.className = 'exposure-card-thumb-canvas';
+        canvas.setAttribute('aria-label', proof.id);
+        var ctx = canvas.getContext('2d');
+
+        var srcs = [proof.base].concat(proof.overlays);
+        var imgs = srcs.map(function () { return new Image(); });
+        var loaded = 0;
+
+        function draw() {
+            var base = imgs[0];
+            if (!base.complete || !base.naturalWidth) return;
+            canvas.width = base.naturalWidth;
+            canvas.height = base.naturalHeight;
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.drawImage(base, 0, 0);
+            for (var i = 1; i < imgs.length; i++) {
+                if (!imgs[i].complete || !imgs[i].naturalWidth) continue;
+                ctx.globalCompositeOperation = 'screen';
+                ctx.drawImage(imgs[i], 0, 0, canvas.width, canvas.height);
+            }
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        imgs.forEach(function (img, idx) {
+            img.onload = function () { loaded++; if (loaded === srcs.length) draw(); };
+            img.onerror = function () { loaded++; if (loaded === srcs.length) draw(); };
+            img.src = baseUrl + srcs[idx];
+        });
+
+        return canvas;
     }
 
     function createModal() {
