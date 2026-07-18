@@ -51,22 +51,17 @@
             var thumb = sequence.overlays.length > 0
                 ? createCompositeThumbnail(sequence)
                 : createPlainThumbnail(sequence);
-
-            var info = document.createElement('div');
-            info.className = 'exposure-card-info';
+            card.appendChild(thumb);
 
             var idLabel = document.createElement('span');
-            idLabel.className = 'exposure-card-id';
+            idLabel.className = 'filename-label filename-overlay';
             idLabel.textContent = sequence.base;
+            card.appendChild(idLabel);
 
             var countLabel = document.createElement('span');
-            countLabel.className = 'exposure-card-count';
+            countLabel.className = 'filename-label filename-count-overlay';
             countLabel.textContent = sequence.overlays.length + ' overlay' + (sequence.overlays.length !== 1 ? 's' : '');
-
-            info.appendChild(idLabel);
-            info.appendChild(countLabel);
-            card.appendChild(thumb);
-            card.appendChild(info);
+            card.appendChild(countLabel);
 
             card.addEventListener('click', function () { openExposureViewer(sequence); });
             card.addEventListener('keydown', function (e) {
