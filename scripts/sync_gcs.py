@@ -200,9 +200,9 @@ def discover_galleries(staging_dir):
     return galleries
 
 
-def build_proofs_for_folder(image_list):
+def build_sequences_for_folder(image_list):
     """
-    Builds proofs for the multiple exposure viewer.
+    Builds multiple-exposure sequences for the multiple exposure viewer.
 
     If no image is tagged 'multiple_exposure', returns [] and the regular gallery
     is shown instead.
@@ -218,19 +218,19 @@ def build_proofs_for_folder(image_list):
     ):
         return []
 
-    proofs = []
+    sequences = []
     current = None
     for img in image_list:
         is_me = any(kw.lower() == 'multiple_exposure' for kw in img.get('keywords', []))
         if is_me and img.get('flash'):
             current = {'id': img['name'].rsplit('.', 1)[0], 'base': img['name'], 'overlays': []}
-            proofs.append(current)
+            sequences.append(current)
         elif is_me and current is not None:
             current['overlays'].append(img['name'])
         else:
-            proofs.append({'id': img['name'].rsplit('.', 1)[0], 'base': img['name'], 'overlays': []})
+            sequences.append({'id': img['name'].rsplit('.', 1)[0], 'base': img['name'], 'overlays': []})
             current = None
-    return proofs
+    return sequences
 
 
 def main():
@@ -441,14 +441,14 @@ def main():
                 manifest_path = f"{gcs_prefix}manifest.json"
                 
                 # Generate the new manifest content.
-                # Format: {"images": [...], "proofs": [...]}
-                # The "proofs" key is only populated when sequence keywords are present;
+                # Format: {"images": [...], "sequences": [...]}
+                # The "sequences" key is only populated when sequence keywords are present;
                 # albums without sequence keywords get an empty list and behave identically
                 # to the old plain-array format on the frontend.
                 sorted_filenames = [img["name"] for img in image_list] if image_list else []
-                proofs = build_proofs_for_folder(image_list) if image_list else []
+                sequences = build_sequences_for_folder(image_list) if image_list else []
                 new_manifest_content = json.dumps(
-                    {"images": sorted_filenames, "proofs": proofs},
+                    {"images": sorted_filenames, "sequences": sequences},
                     indent=2
                 )
 

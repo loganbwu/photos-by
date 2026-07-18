@@ -69,20 +69,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     albumAccessSection.style.display = 'none';
                     galleryContainer.style.display = '';
 
-                    // The backend may return the manifest in one of two shapes:
-                    // - New backend: { manifest: [...], proofs: [...] }
-                    // - Old backend (not yet redeployed) with new-format GCS manifest:
-                    //   { manifest: { images: [...], proofs: [...] } }
-                    // Normalise both so the rest of the code is consistent.
+                    // The GCS manifest is either a plain array of filenames (old format)
+                    // or { images: [...], sequences: [...] } (new format). Normalise so
+                    // the rest of the code is consistent.
                     let manifest = data.manifest;
-                    let proofs = data.proofs || [];
+                    let sequences = [];
                     if (manifest && !Array.isArray(manifest) && typeof manifest === 'object') {
-                        proofs = manifest.proofs || [];
+                        sequences = manifest.sequences || [];
                         manifest = manifest.images || [];
                     }
 
-                    if (typeof window.initMultipleExposureViewer === 'function' && proofs.length > 0) {
-                        window.initMultipleExposureViewer(proofs, data.base_url);
+                    if (typeof window.initMultipleExposureViewer === 'function' && sequences.length > 0) {
+                        window.initMultipleExposureViewer(sequences, data.base_url);
                     } else {
                         populateGallery(data.base_url, data.images, manifest);
                     }

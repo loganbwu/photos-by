@@ -2,8 +2,8 @@
     'use strict';
 
     var baseUrl = '';
-    var allProofs = [];
-    var currentProof = null;
+    var allSequences = [];
+    var currentSequence = null;
     var baseImage = null;
     var overlayImages = [];
     var overlaySettings = [];
@@ -14,15 +14,15 @@
     var viewerLastFocused = null; // element to restore focus to when the viewer closes
 
 
-    function initMultipleExposureViewer(proofs, galleryBaseUrl) {
-        if (!proofs || proofs.length === 0) return;
+    function initMultipleExposureViewer(sequences, galleryBaseUrl) {
+        if (!sequences || sequences.length === 0) return;
         baseUrl = galleryBaseUrl;
-        allProofs = proofs;
-        renderExposuresSection(proofs);
+        allSequences = sequences;
+        renderExposuresSection(sequences);
         createModal();
     }
 
-    function renderExposuresSection(proofs) {
+    function renderExposuresSection(sequences) {
         var existing = document.getElementById('exposures-section');
         if (existing) existing.remove();
 
@@ -41,36 +41,36 @@
         var cards = document.createElement('div');
         cards.className = 'exposure-cards';
 
-        proofs.forEach(function (proof) {
+        sequences.forEach(function (sequence) {
             var card = document.createElement('div');
             card.className = 'exposure-card';
             card.setAttribute('role', 'button');
             card.setAttribute('tabindex', '0');
-            card.setAttribute('aria-label', 'Open compositor for ' + proof.base);
+            card.setAttribute('aria-label', 'Open compositor for ' + sequence.base);
 
-            var thumb = proof.overlays.length > 0
-                ? createCompositeThumbnail(proof)
-                : createPlainThumbnail(proof);
+            var thumb = sequence.overlays.length > 0
+                ? createCompositeThumbnail(sequence)
+                : createPlainThumbnail(sequence);
 
             var info = document.createElement('div');
             info.className = 'exposure-card-info';
 
             var idLabel = document.createElement('span');
             idLabel.className = 'exposure-card-id';
-            idLabel.textContent = proof.base;
+            idLabel.textContent = sequence.base;
 
             var countLabel = document.createElement('span');
             countLabel.className = 'exposure-card-count';
-            countLabel.textContent = proof.overlays.length + ' overlay' + (proof.overlays.length !== 1 ? 's' : '');
+            countLabel.textContent = sequence.overlays.length + ' overlay' + (sequence.overlays.length !== 1 ? 's' : '');
 
             info.appendChild(idLabel);
             info.appendChild(countLabel);
             card.appendChild(thumb);
             card.appendChild(info);
 
-            card.addEventListener('click', function () { openExposureViewer(proof); });
+            card.addEventListener('click', function () { openExposureViewer(sequence); });
             card.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter' || e.key === ' ') openExposureViewer(proof);
+                if (e.key === 'Enter' || e.key === ' ') openExposureViewer(sequence);
             });
 
             cards.appendChild(card);
@@ -90,10 +90,10 @@
         scheduleResizeAllCardCanvases();
     }
 
-    function createPlainThumbnail(proof) {
+    function createPlainThumbnail(sequence) {
         var img = document.createElement('img');
-        img.src = baseUrl + proof.base;
-        img.alt = proof.base;
+        img.src = baseUrl + sequence.base;
+        img.alt = sequence.base;
         return img;
     }
 
@@ -142,12 +142,12 @@
         return Math.max(1, Math.min(n - 1, MAX_ACTIVE_OVERLAYS));
     }
 
-    function createCompositeThumbnail(proof) {
+    function createCompositeThumbnail(sequence) {
         var canvas = document.createElement('canvas');
         canvas.className = 'exposure-card-thumb-canvas';
         canvas.setAttribute('aria-hidden', 'true');
 
-        var srcs = [proof.base].concat(proof.overlays);
+        var srcs = [sequence.base].concat(sequence.overlays);
         var imgs = srcs.map(function () { return new Image(); });
         var loaded = 0;
 
@@ -156,11 +156,11 @@
             if (!base.complete || !base.naturalWidth) return;
             canvas._imgs = imgs;
 
-            if (proof.overlays.length === 1) {
+            if (sequence.overlays.length === 1) {
                 startCardPulse(canvas, imgs);
             } else {
-                var activeCount = activeOverlayCount(proof.overlays.length);
-                if (activeCount > 0 && activeCount < proof.overlays.length) {
+                var activeCount = activeOverlayCount(sequence.overlays.length);
+                if (activeCount > 0 && activeCount < sequence.overlays.length) {
                     startCardRotation(canvas, imgs, activeCount);
                 }
             }
@@ -248,7 +248,7 @@
         return offset;
     }
 
-    // imgs[0] is the base; imgs[1..] correspond 1:1 with the proof's overlays.
+    // imgs[0] is the base; imgs[1..] correspond 1:1 with the sequence's overlays.
     function startCardRotation(canvas, imgs, activeCount) {
         var activeIndices = [];
         for (var i = 1; i < Math.min(imgs.length, 1 + activeCount); i++) activeIndices.push(i);
@@ -421,28 +421,28 @@
         modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') { closeModal(); return; }
-            if (!currentProof) return;
-            if (e.key === 'ArrowLeft')  { e.preventDefault(); navigateProof(-1); }
-            if (e.key === 'ArrowRight') { e.preventDefault(); navigateProof(1); }
+            if (!currentSequence) return;
+            if (e.key === 'ArrowLeft')  { e.preventDefault(); navigateSequence(-1); }
+            if (e.key === 'ArrowRight') { e.preventDefault(); navigateSequence(1); }
         });
     }
 
-    function openExposureViewer(proof) {
-        if (!currentProof) {
+    function openExposureViewer(sequence) {
+        if (!currentSequence) {
             viewerLastFocused = document.activeElement;
         }
-        currentProof = proof;
+        currentSequence = sequence;
         overlayImages = [];
-        overlaySettings = proof.overlays.map(function () { return { enabled: false, currentAlpha: 0, targetAlpha: 0 }; });
+        overlaySettings = sequence.overlays.map(function () { return { enabled: false, currentAlpha: 0, targetAlpha: 0 }; });
 
-        document.getElementById('multiple-exposure-viewer-title').textContent = proof.base;
+        document.getElementById('multiple-exposure-viewer-title').textContent = sequence.base;
 
         var modal = document.getElementById('multiple-exposure-viewer-modal');
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
 
-        renderOverlayControls(proof);
-        loadImages(proof);
+        renderOverlayControls(sequence);
+        loadImages(sequence);
         // Deferred: moving focus synchronously here (e.g. while still inside the
         // keydown handler for Enter/Space on the triggering card) can cause the
         // browser's native "Enter activates the focused button" behaviour to
@@ -452,7 +452,7 @@
         }, 0);
     }
 
-    function renderOverlayControls(proof) {
+    function renderOverlayControls(sequence) {
         var list = document.getElementById('exposure-overlays-list');
         list.innerHTML = '';
 
@@ -463,10 +463,10 @@
 
         var baseName = document.createElement('p');
         baseName.className = 'exposure-base-name';
-        baseName.textContent = proof.base;
+        baseName.textContent = sequence.base;
         list.appendChild(baseName);
 
-        if (proof.overlays.length === 0) {
+        if (sequence.overlays.length === 0) {
             return;
         }
 
@@ -487,7 +487,7 @@
 
         var overlayBtns = [];
 
-        proof.overlays.forEach(function (name, i) {
+        sequence.overlays.forEach(function (name, i) {
             var btn = document.createElement('button');
             btn.className = 'exposure-overlay-btn';
             btn.setAttribute('aria-pressed', 'false');
@@ -526,7 +526,7 @@
         btn.textContent = allEnabled ? 'Deselect all' : 'Select all';
     }
 
-    function loadImages(proof) {
+    function loadImages(sequence) {
         var myGen = ++viewerLoadGen;
         var canvas = document.getElementById('exposure-canvas');
         var ctx = canvas.getContext('2d');
@@ -540,13 +540,13 @@
         ctx.textAlign = 'center';
         ctx.fillText('Loading...', canvas.width / 2, canvas.height / 2);
 
-        var allSrcs = [proof.base].concat(proof.overlays);
+        var allSrcs = [sequence.base].concat(sequence.overlays);
         var imgs = allSrcs.map(function () { return new Image(); });
         var loaded = 0;
 
         imgs.forEach(function (img, idx) {
             function onLoad() {
-                if (myGen !== viewerLoadGen) return;   // a newer proof has since been opened; discard
+                if (myGen !== viewerLoadGen) return;   // a newer sequence has since been opened; discard
                 loaded++;
                 if (idx === 0) {
                     canvas.width = img.naturalWidth;
@@ -623,20 +623,20 @@
         ctx.globalCompositeOperation = 'source-over';
     }
 
-    function navigateProof(delta) {
-        var idx = allProofs.findIndex(function (p) { return p.id === currentProof.id; });
+    function navigateSequence(delta) {
+        var idx = allSequences.findIndex(function (s) { return s.id === currentSequence.id; });
         if (idx === -1) return;
         var newIdx = idx + delta;
-        if (newIdx < 0 || newIdx >= allProofs.length) return;
-        openExposureViewer(allProofs[newIdx]);
+        if (newIdx < 0 || newIdx >= allSequences.length) return;
+        openExposureViewer(allSequences[newIdx]);
     }
 
     function closeModal() {
         var modal = document.getElementById('multiple-exposure-viewer-modal');
         if (modal) modal.style.display = 'none';
         document.body.style.overflow = '';
-        viewerLoadGen++;   // discard any in-flight image loads from the closed proof
-        currentProof = null;
+        viewerLoadGen++;   // discard any in-flight image loads from the closed sequence
+        currentSequence = null;
         baseImage = null;
         overlayImages = [];
         if (viewerLastFocused && typeof viewerLastFocused.focus === 'function') {
