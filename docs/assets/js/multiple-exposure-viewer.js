@@ -46,7 +46,7 @@
             card.className = 'exposure-card';
             card.setAttribute('role', 'button');
             card.setAttribute('tabindex', '0');
-            card.setAttribute('aria-label', 'Open compositor for ' + proof.id);
+            card.setAttribute('aria-label', 'Open compositor for ' + proof.base);
 
             var thumb = proof.overlays.length > 0
                 ? createCompositeThumbnail(proof)
@@ -57,7 +57,7 @@
 
             var idLabel = document.createElement('span');
             idLabel.className = 'exposure-card-id';
-            idLabel.textContent = proof.id.replace(/_/g, ' ');
+            idLabel.textContent = proof.base;
 
             var countLabel = document.createElement('span');
             countLabel.className = 'exposure-card-count';
@@ -93,7 +93,7 @@
     function createPlainThumbnail(proof) {
         var img = document.createElement('img');
         img.src = baseUrl + proof.base;
-        img.alt = proof.id;
+        img.alt = proof.base;
         return img;
     }
 
@@ -435,7 +435,7 @@
         overlayImages = [];
         overlaySettings = proof.overlays.map(function () { return { enabled: false, currentAlpha: 0, targetAlpha: 0 }; });
 
-        document.getElementById('multiple-exposure-viewer-title').textContent = proof.id.replace(/_/g, ' ');
+        document.getElementById('multiple-exposure-viewer-title').textContent = proof.base;
 
         var modal = document.getElementById('multiple-exposure-viewer-modal');
         modal.style.display = 'flex';
