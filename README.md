@@ -189,6 +189,8 @@ cd backend && rye run make-slideshow /path/to/photos [output.mp4] [--tail SECOND
     rye run sync-gcs
     ```
 
+**Nested folders for local organization:** Client folders can be nested arbitrarily deep purely for your own convenience (e.g. `2026_event/person01/`) -- the gallery password is always the leaf folder's own name (`person01`), not its full path. Since GCS gallery paths are flat, two leaf folders that resolve to the same name (even under different parents, or differing only in case) will cause the sync script to stop with an error rather than silently overwriting one gallery with another.
+
 ### Sync Optimization
 
 The GCS sync script is optimized to avoid re-uploading identical files and manifests:

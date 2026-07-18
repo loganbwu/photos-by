@@ -165,6 +165,41 @@ def get_flash_override(keywords):
     return fired
 
 
+def discover_galleries(staging_dir):
+    """
+    Walks the staging directory recursively and returns {folder_name: local_path}
+    for every directory that directly contains image files.
+
+    Nesting (e.g. `event/person01`) is allowed purely for local organization --
+    the gallery/album name is always the leaf directory's own name, not its
+    full relative path. Since GCS gallery paths are flat, two leaf directories
+    that resolve to the same name (even under different parents, and even if
+    only the casing differs) would collide in GCS -- this is a fatal error.
+    """
+    galleries = {}
+    seen_lower = {}
+    for root, dirs, files in os.walk(staging_dir):
+        dirs[:] = sorted(d for d in dirs if not d.startswith('.'))
+        if root == staging_dir:
+            continue
+        has_images = any(f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')) for f in files)
+        if not has_images:
+            continue
+        name = os.path.basename(root)
+        lower_name = name.lower()
+        if lower_name in seen_lower:
+            print(
+                f"ERROR: Clash detected. Gallery folders '{seen_lower[lower_name]}' and '{root}' "
+                f"both resolve to the album name '{lower_name}'.",
+                file=sys.stderr,
+            )
+            print("Rename one of these folders so their names are unique and try again.", file=sys.stderr)
+            sys.exit(1)
+        seen_lower[lower_name] = root
+        galleries[name] = root
+    return galleries
+
+
 def build_proofs_for_folder(image_list):
     """
     Builds proofs for the multiple exposure viewer.
@@ -214,9 +249,14 @@ def main():
         sys.exit(1)
 
     # --- 1. Discover all image files across all client folders ---
+    # Client folders may be nested arbitrarily deep for local organization
+    # (e.g. `event/person01`) -- the gallery name is always the leaf
+    # directory's own name, not its full relative path. discover_galleries()
+    # already rejects leaf name clashes (e.g. event01/person01 vs
+    # event02/person01), since GCS gallery paths are flat.
     all_files_to_process = []
-    client_folders = [d for d in os.listdir(LOCAL_STAGING_DIR) if os.path.isdir(os.path.join(LOCAL_STAGING_DIR, d))]
-    client_folders.sort()  # Sort folders alphabetically
+    galleries = discover_galleries(LOCAL_STAGING_DIR)
+    client_folders = sorted(galleries.keys())
 
     if not client_folders:
         print("No client folders found. Nothing to sync.")
@@ -224,21 +264,8 @@ def main():
 
     print(f"Found client folders: {', '.join(client_folders)}")
 
-    # --- Check for case-insensitive folder name clashes ---
-    print("Checking for folder name clashes (case-insensitive)...")
-    seen_folders = {}
-    for folder in client_folders:
-        lower_folder = folder.lower()
-        if lower_folder in seen_folders:
-            print(f"ERROR: Clash detected. Folders '{seen_folders[lower_folder]}' and '{folder}' are the same when case is ignored.", file=sys.stderr)
-            print("Please rename one of the folders and try again.", file=sys.stderr)
-            sys.exit(1)
-        seen_folders[lower_folder] = folder
-    print("No clashes found.")
-    # ----------------------------------------------------
-
     for folder_name in client_folders:
-        local_path = os.path.join(LOCAL_STAGING_DIR, folder_name)
+        local_path = galleries[folder_name]
         image_files = [f for f in os.listdir(local_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))]
         for filename in image_files:
             all_files_to_process.append({
@@ -426,7 +453,7 @@ def main():
                 )
 
                 # Write manifest locally so it can be inspected before/after sync
-                local_manifest_path = os.path.join(LOCAL_STAGING_DIR, folder_name, "manifest.json")
+                local_manifest_path = os.path.join(galleries[folder_name], "manifest.json")
                 with open(local_manifest_path, 'w', encoding='utf-8') as f:
                     f.write(new_manifest_content)
                 
