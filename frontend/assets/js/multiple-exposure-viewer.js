@@ -10,6 +10,8 @@
     var animFrameId = null;
     var lastTimestamp = null;
     var TRANSITION_MS = 250;
+    var viewerLoadGen = 0;      // incremented per loadImages call; stale loads check against this
+    var viewerLastFocused = null; // element to restore focus to when the viewer closes
 
 
     function initMultipleExposureViewer(proofs, galleryBaseUrl) {
@@ -80,6 +82,12 @@
         if (albumViewer && albumViewer.parentNode) {
             albumViewer.parentNode.insertBefore(section, albumViewer);
         }
+
+        // Re-sync every rendered card's canvas resolution to its actual
+        // displayed size whenever the layout changes (responsive breakpoints,
+        // window resize) -- there's no zoom control here, just the viewport.
+        window.addEventListener('resize', scheduleResizeAllCardCanvases);
+        scheduleResizeAllCardCanvases();
     }
 
     function createPlainThumbnail(proof) {
@@ -89,42 +97,298 @@
         return img;
     }
 
-    // Screen-blends the base with all its overlays on a canvas, the same way
-    // the modal viewer composites exposures, so the card thumbnail shows what
-    // the sequence actually looks like instead of just the base exposure.
+    // ---------------------------------------------------------------------------
+    // Card thumbnail compositing: static for <=1 (well, 0, since >0 always
+    // reaches here) overlay is impossible -- every card that gets here has at
+    // least 1 overlay, so it either pulses (n=1) or rotates (n>=2). Screen-
+    // blends client-side, the same technique the modal viewer uses for live
+    // overlay toggling, just applied once per card (or continuously, for the
+    // rotate/pulse cases) instead of interactively.
+    //
+    // How many overlays are shown at once (n = total overlay count):
+    //   n=1   -> 1, permanently, but pulsing 100%<->0% opacity (nothing to
+    //            rotate in, so a static full-opacity overlay looked inert)
+    //   n=2-3 -> n-1 (always one fewer than the total, rotating)
+    //   n>=4  -> MAX_ACTIVE_OVERLAYS (3), rotating
+    // ---------------------------------------------------------------------------
+    var MAX_ACTIVE_OVERLAYS = 3;
+    var CARD_ROTATION_MS = 3000;
+    var CARD_MAX_FPS = 10;
+    var CARD_REDRAW_INTERVAL_MS = 1000 / CARD_MAX_FPS;
+    var lastCardDrawTime = 0;
+    var cardAnimations = new Map();   // canvas -> rotation/pulse state, driven by tickCardAnimations
+
+    // Only cards actually scrolled into view get redrawn each frame — an
+    // off-screen card's animation state still advances (so it isn't stuck
+    // showing a stale frame whenever it does scroll into view) but skips the
+    // canvas compositing work, which is what actually costs frame rate.
+    var visibleCanvases = new Set();
+    var cardVisibilityObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (entry.isIntersecting) visibleCanvases.add(entry.target);
+            else visibleCanvases.delete(entry.target);
+        });
+    }, { rootMargin: '200px' });
+
+    function stopCardAnimation(canvas) {
+        if (cardAnimations.delete(canvas)) {
+            cardVisibilityObserver.unobserve(canvas);
+            visibleCanvases.delete(canvas);
+        }
+    }
+
+    function activeOverlayCount(n) {
+        if (n === 0) return 0;
+        return Math.max(1, Math.min(n - 1, MAX_ACTIVE_OVERLAYS));
+    }
+
     function createCompositeThumbnail(proof) {
         var canvas = document.createElement('canvas');
         canvas.className = 'exposure-card-thumb-canvas';
-        canvas.setAttribute('aria-label', proof.id);
-        var ctx = canvas.getContext('2d');
+        canvas.setAttribute('aria-hidden', 'true');
 
         var srcs = [proof.base].concat(proof.overlays);
         var imgs = srcs.map(function () { return new Image(); });
         var loaded = 0;
 
-        function draw() {
+        function allLoaded() {
             var base = imgs[0];
             if (!base.complete || !base.naturalWidth) return;
-            canvas.width = base.naturalWidth;
-            canvas.height = base.naturalHeight;
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.drawImage(base, 0, 0);
-            for (var i = 1; i < imgs.length; i++) {
-                if (!imgs[i].complete || !imgs[i].naturalWidth) continue;
-                ctx.globalCompositeOperation = 'screen';
-                ctx.drawImage(imgs[i], 0, 0, canvas.width, canvas.height);
+            canvas._imgs = imgs;
+
+            if (proof.overlays.length === 1) {
+                startCardPulse(canvas, imgs);
+            } else {
+                var activeCount = activeOverlayCount(proof.overlays.length);
+                if (activeCount > 0 && activeCount < proof.overlays.length) {
+                    startCardRotation(canvas, imgs, activeCount);
+                }
             }
-            ctx.globalCompositeOperation = 'source-over';
+            resizeCardCanvas(canvas);   // sets canvas.width/height to the card's actual displayed size and paints it
         }
 
         imgs.forEach(function (img, idx) {
-            img.onload = function () { loaded++; if (loaded === srcs.length) draw(); };
-            img.onerror = function () { loaded++; if (loaded === srcs.length) draw(); };
+            img.onload = function () { loaded++; if (loaded === srcs.length) allLoaded(); };
+            img.onerror = function () { loaded++; if (loaded === srcs.length) allLoaded(); };
             img.src = baseUrl + srcs[idx];
         });
 
         return canvas;
     }
+
+    // Renders at the canvas's actual displayed CSS size (scaled by devicePixelRatio
+    // for sharpness), not the source image's resolution — thumbnails are shown
+    // small, and rotation redraws every layer every frame, so matching display
+    // size keeps that redraw cheap. Canvas width/height writes clear the drawing
+    // buffer, so this always repaints immediately after resizing.
+    var CARD_CANVAS_MAX_PX = 1600;   // no point rendering the canvas larger than this
+
+    function resizeCardCanvas(canvas) {
+        var imgs = canvas._imgs;
+        if (!imgs) return;
+        var base = imgs[0];
+        if (!base.complete || !base.naturalWidth) return;
+        var displayWidth = canvas.clientWidth || (canvas.parentElement && canvas.parentElement.clientWidth) || 0;
+        if (!displayWidth) return;
+        var dpr = window.devicePixelRatio || 1;
+        var targetWidth = Math.max(1, Math.round(displayWidth * dpr));
+        var targetHeight = Math.max(1, Math.round(targetWidth * base.naturalHeight / base.naturalWidth));
+        var overCap = Math.max(targetWidth, targetHeight) / CARD_CANVAS_MAX_PX;
+        if (overCap > 1) {
+            targetWidth = Math.max(1, Math.round(targetWidth / overCap));
+            targetHeight = Math.max(1, Math.round(targetHeight / overCap));
+        }
+        if (canvas.width === targetWidth && canvas.height === targetHeight) return;
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+
+        var state = cardAnimations.get(canvas);
+        if (state && state.kind === 'pulse') {
+            var elapsed = state.startTime === null ? 0 : performance.now() - state.startTime;
+            drawPulsingCard(canvas, state, elapsed);
+        } else if (state) {
+            var progress = 0;
+            if (state.transition && state.transition.startTime !== null) {
+                progress = Math.min(1, (performance.now() - state.transition.startTime) / CARD_ROTATION_MS);
+            }
+            drawRotatingCard(canvas, state, progress);
+        } else {
+            drawStaticComposite(canvas, imgs);
+        }
+    }
+
+    var resizeAllRaf = null;
+    function scheduleResizeAllCardCanvases() {
+        if (resizeAllRaf !== null) return;
+        resizeAllRaf = requestAnimationFrame(function () {
+            resizeAllRaf = null;
+            document.querySelectorAll('.exposure-card-thumb-canvas').forEach(resizeCardCanvas);
+        });
+    }
+
+    function drawStaticComposite(canvas, imgs) {
+        var ctx = canvas.getContext('2d');
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.drawImage(imgs[0], 0, 0, canvas.width, canvas.height);
+        for (var i = 1; i < imgs.length; i++) {
+            if (!imgs[i].complete || !imgs[i].naturalWidth) continue;
+            ctx.globalCompositeOperation = 'screen';
+            ctx.drawImage(imgs[i], 0, 0, canvas.width, canvas.height);
+        }
+        ctx.globalCompositeOperation = 'source-over';
+    }
+
+    // Consumed once, the first time an animation's startTime is set from null
+    // (see tickCardAnimations) -- backdates that start so cards don't all
+    // begin their cycles in lockstep. Zeroed after use so it only ever offsets
+    // a card's very first cycle, not every one after it.
+    function takeInitialOffset(state) {
+        var offset = state.initialOffsetMs || 0;
+        state.initialOffsetMs = 0;
+        return offset;
+    }
+
+    // imgs[0] is the base; imgs[1..] correspond 1:1 with the proof's overlays.
+    function startCardRotation(canvas, imgs, activeCount) {
+        var activeIndices = [];
+        for (var i = 1; i < Math.min(imgs.length, 1 + activeCount); i++) activeIndices.push(i);
+        var state = {
+            kind: 'rotate', imgs: imgs, activeIndices: activeIndices, transition: null,
+            initialOffsetMs: Math.random() * CARD_ROTATION_MS,
+        };
+        beginNextCardTransition(state);
+        cardAnimations.set(canvas, state);
+        cardVisibilityObserver.observe(canvas);
+    }
+
+    // A single overlay never has anything to rotate in, so instead of sitting
+    // at a static 100% (which reads as inert), it continuously breathes between
+    // 100% and 0% opacity to signal there's a composited layer at all.
+    var PULSE_PERIOD_MS = 10000;   // one full 100%->0%->100% cycle: 5s down, 5s back up
+    var PULSE_MIN_ALPHA = 0;
+
+    function startCardPulse(canvas, imgs) {
+        var state = { kind: 'pulse', imgs: imgs, startTime: null, initialOffsetMs: Math.random() * PULSE_PERIOD_MS };
+        cardAnimations.set(canvas, state);
+        cardVisibilityObserver.observe(canvas);
+    }
+
+    function drawPulsingCard(canvas, state, elapsed) {
+        var phase = (elapsed % PULSE_PERIOD_MS) / PULSE_PERIOD_MS;   // 0..1 over one full cycle
+        var mid = (1 + PULSE_MIN_ALPHA) / 2;
+        var amp = (1 - PULSE_MIN_ALPHA) / 2;
+        var alpha = mid + amp * Math.cos(phase * 2 * Math.PI);       // 1 -> PULSE_MIN_ALPHA -> 1
+
+        var ctx = canvas.getContext('2d');
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.drawImage(state.imgs[0], 0, 0, canvas.width, canvas.height);
+        var overlay = state.imgs[1];
+        if (overlay.complete && overlay.naturalWidth) {
+            ctx.globalCompositeOperation = 'screen';
+            ctx.globalAlpha = alpha;
+            ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
+        }
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+    }
+
+    function beginNextCardTransition(state) {
+        var pool = [];
+        for (var i = 1; i < state.imgs.length; i++) {
+            if (state.activeIndices.indexOf(i) === -1) pool.push(i);
+        }
+        if (pool.length === 0) { state.transition = null; return; }
+        state.transition = {
+            outIdx: state.activeIndices[0],                        // oldest active overlay retires
+            inIdx: pool[Math.floor(Math.random() * pool.length)],   // random replacement
+            startTime: null,
+        };
+        state.steadyCanvas = null;   // active set just changed -- invalidate the cached steady layer
+    }
+
+    // The active overlays other than the one currently fading out don't change
+    // for the whole duration of a transition, so they're composited once into
+    // an offscreen canvas and reused every redraw, instead of re-compositing
+    // all of them from scratch on every frame.
+    function rebuildSteadyLayer(canvas, state) {
+        var sc = state.steadyCanvas || document.createElement('canvas');
+        sc.width = canvas.width;
+        sc.height = canvas.height;
+        var sctx = sc.getContext('2d');
+        sctx.globalCompositeOperation = 'source-over';
+        sctx.drawImage(state.imgs[0], 0, 0, sc.width, sc.height);
+        sctx.globalCompositeOperation = 'screen';
+        state.activeIndices.forEach(function (idx) {
+            if (idx === state.transition.outIdx) return;   // drawn separately each frame with its fading alpha
+            var img = state.imgs[idx];
+            if (img.complete && img.naturalWidth) sctx.drawImage(img, 0, 0, sc.width, sc.height);
+        });
+        sctx.globalCompositeOperation = 'source-over';
+        state.steadyCanvas = sc;
+    }
+
+    function drawRotatingCard(canvas, state, progress) {
+        if (!state.steadyCanvas || state.steadyCanvas.width !== canvas.width || state.steadyCanvas.height !== canvas.height) {
+            rebuildSteadyLayer(canvas, state);
+        }
+        var ctx = canvas.getContext('2d');
+        var t = state.transition;
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.drawImage(state.steadyCanvas, 0, 0);
+        ctx.globalCompositeOperation = 'screen';
+        var outImg = state.imgs[t.outIdx];
+        if (outImg.complete && outImg.naturalWidth) {
+            ctx.globalAlpha = 1 - progress;
+            ctx.drawImage(outImg, 0, 0, canvas.width, canvas.height);
+        }
+        var inImg = state.imgs[t.inIdx];
+        if (inImg.complete && inImg.naturalWidth) {
+            ctx.globalAlpha = progress;
+            ctx.drawImage(inImg, 0, 0, canvas.width, canvas.height);
+        }
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = 'source-over';
+    }
+
+    function tickCardAnimations(timestamp) {
+        // Pause entirely (not just the draw) while the tab/window isn't visible.
+        // A transition's startTime is a real timestamp, so skipping ticks here
+        // doesn't desync anything -- progress just picks up from wherever real
+        // wall-clock time says it should be once the tab is visible again.
+        if (document.hidden) {
+            requestAnimationFrame(tickCardAnimations);
+            return;
+        }
+
+        // Transition timing/state always advances every frame (cheap); the actual
+        // canvas redraw is throttled to CARD_MAX_FPS, since a 3s crossfade doesn't
+        // need 60fps smoothness and this is the expensive part per visible card.
+        var shouldDraw = (timestamp - lastCardDrawTime) >= CARD_REDRAW_INTERVAL_MS;
+        if (shouldDraw) lastCardDrawTime = timestamp;
+
+        cardAnimations.forEach(function (state, canvas) {
+            if (!canvas.isConnected) { stopCardAnimation(canvas); return; }
+
+            if (state.kind === 'pulse') {
+                if (state.startTime === null) state.startTime = timestamp - takeInitialOffset(state);
+                if (shouldDraw && visibleCanvases.has(canvas)) drawPulsingCard(canvas, state, timestamp - state.startTime);
+                return;
+            }
+
+            if (!state.transition) return;
+            if (state.transition.startTime === null) state.transition.startTime = timestamp - takeInitialOffset(state);
+            var progress = Math.min(1, (timestamp - state.transition.startTime) / CARD_ROTATION_MS);
+            if (shouldDraw && visibleCanvases.has(canvas)) drawRotatingCard(canvas, state, progress);
+            if (progress >= 1) {
+                var doneIdx = state.activeIndices.indexOf(state.transition.outIdx);
+                if (doneIdx !== -1) state.activeIndices.splice(doneIdx, 1);
+                state.activeIndices.push(state.transition.inIdx);
+                beginNextCardTransition(state);
+            }
+        });
+        requestAnimationFrame(tickCardAnimations);
+    }
+    requestAnimationFrame(tickCardAnimations);
 
     function createModal() {
         if (document.getElementById('multiple-exposure-viewer-modal')) return;
@@ -164,6 +428,9 @@
     }
 
     function openExposureViewer(proof) {
+        if (!currentProof) {
+            viewerLastFocused = document.activeElement;
+        }
         currentProof = proof;
         overlayImages = [];
         overlaySettings = proof.overlays.map(function () { return { enabled: false, currentAlpha: 0, targetAlpha: 0 }; });
@@ -176,6 +443,13 @@
 
         renderOverlayControls(proof);
         loadImages(proof);
+        // Deferred: moving focus synchronously here (e.g. while still inside the
+        // keydown handler for Enter/Space on the triggering card) can cause the
+        // browser's native "Enter activates the focused button" behaviour to
+        // immediately fire on the close button, closing the viewer it just opened.
+        setTimeout(function () {
+            document.getElementById('multiple-exposure-viewer-close').focus();
+        }, 0);
     }
 
     function renderOverlayControls(proof) {
@@ -216,6 +490,7 @@
         proof.overlays.forEach(function (name, i) {
             var btn = document.createElement('button');
             btn.className = 'exposure-overlay-btn';
+            btn.setAttribute('aria-pressed', 'false');
             btn.textContent = name;
             btn.title = name;
             overlayBtns.push(btn);
@@ -223,6 +498,7 @@
                 btn.addEventListener('click', function () {
                     overlaySettings[idx].enabled = !overlaySettings[idx].enabled;
                     btn.classList.toggle('active', overlaySettings[idx].enabled);
+                    btn.setAttribute('aria-pressed', String(overlaySettings[idx].enabled));
                     updateSelectAllBtn(selectAllBtn);
                     setTargetAlpha(idx);
                 });
@@ -236,6 +512,7 @@
             overlaySettings.forEach(function (s, idx) {
                 s.enabled = enable;
                 overlayBtns[idx].classList.toggle('active', enable);
+                overlayBtns[idx].setAttribute('aria-pressed', String(enable));
                 setTargetAlpha(idx);
             });
             updateSelectAllBtn(selectAllBtn);
@@ -250,6 +527,7 @@
     }
 
     function loadImages(proof) {
+        var myGen = ++viewerLoadGen;
         var canvas = document.getElementById('exposure-canvas');
         var ctx = canvas.getContext('2d');
 
@@ -267,7 +545,8 @@
         var loaded = 0;
 
         imgs.forEach(function (img, idx) {
-            img.onload = function () {
+            function onLoad() {
+                if (myGen !== viewerLoadGen) return;   // a newer proof has since been opened; discard
                 loaded++;
                 if (idx === 0) {
                     canvas.width = img.naturalWidth;
@@ -278,15 +557,9 @@
                     overlayImages = imgs.slice(1);
                     redraw();
                 }
-            };
-            img.onerror = function () {
-                loaded++;
-                if (loaded === allSrcs.length) {
-                    baseImage = imgs[0];
-                    overlayImages = imgs.slice(1);
-                    redraw();
-                }
-            };
+            }
+            img.onload = onLoad;
+            img.onerror = onLoad;
             img.src = baseUrl + allSrcs[idx];
         });
     }
@@ -362,9 +635,14 @@
         var modal = document.getElementById('multiple-exposure-viewer-modal');
         if (modal) modal.style.display = 'none';
         document.body.style.overflow = '';
+        viewerLoadGen++;   // discard any in-flight image loads from the closed proof
         currentProof = null;
         baseImage = null;
         overlayImages = [];
+        if (viewerLastFocused && typeof viewerLastFocused.focus === 'function') {
+            viewerLastFocused.focus();
+        }
+        viewerLastFocused = null;
     }
 
     window.initMultipleExposureViewer = initMultipleExposureViewer;
