@@ -113,6 +113,17 @@
     var lastCardDrawTime = 0;
     var cardAnimations = new Map();   // canvas -> rotation/pulse state, driven by tickCardAnimations
 
+    // A gap between ticks bigger than this (main-thread hitch -- e.g. a browser
+    // extension's periodic DOM scan) gets absorbed into every active animation's
+    // start time below, rather than counted as elapsed progress. That delays the
+    // animation by the hitch instead of making it skip/jump ahead to stay in
+    // sync with real time. Gaps bigger than MAX_ABSORBED_HITCH_MS are treated as
+    // a real elapsed-time gap (e.g. the tab was backgrounded, see document.hidden
+    // below) and allowed to catch up normally instead.
+    var EXPECTED_TICK_GAP_MS = 50;
+    var MAX_ABSORBED_HITCH_MS = 2000;
+    var lastTickTimestamp = null;
+
     // Only cards actually scrolled into view get redrawn each frame — an
     // off-screen card's animation state still advances (so it isn't stuck
     // showing a stale frame whenever it does scroll into view) but skips the
@@ -351,9 +362,16 @@
         // doesn't desync anything -- progress just picks up from wherever real
         // wall-clock time says it should be once the tab is visible again.
         if (document.hidden) {
+            lastTickTimestamp = timestamp;
             requestAnimationFrame(tickCardAnimations);
             return;
         }
+
+        var tickGap = lastTickTimestamp === null ? 0 : timestamp - lastTickTimestamp;
+        lastTickTimestamp = timestamp;
+        var hitch = (tickGap > EXPECTED_TICK_GAP_MS && tickGap < MAX_ABSORBED_HITCH_MS)
+            ? tickGap - EXPECTED_TICK_GAP_MS
+            : 0;
 
         // Transition timing/state always advances every frame (cheap); the actual
         // canvas redraw is throttled to CARD_MAX_FPS, since a 3s crossfade doesn't
@@ -363,6 +381,11 @@
 
         cardAnimations.forEach(function (state, canvas) {
             if (!canvas.isConnected) { stopCardAnimation(canvas); return; }
+
+            if (hitch > 0) {
+                if (typeof state.startTime === 'number') state.startTime += hitch;
+                if (state.transition && typeof state.transition.startTime === 'number') state.transition.startTime += hitch;
+            }
 
             if (state.kind === 'pulse') {
                 if (state.startTime === null) state.startTime = timestamp - takeInitialOffset(state);
