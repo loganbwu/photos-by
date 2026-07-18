@@ -12,6 +12,8 @@
     var TRANSITION_MS = 250;
     var viewerLoadGen = 0;      // incremented per loadImages call; stale loads check against this
     var viewerLastFocused = null; // element to restore focus to when the viewer closes
+    var exposureCanvas = null;  // #exposure-canvas, resolved once in createModal()
+    var exposureCtx = null;
 
 
     function initMultipleExposureViewer(sequences, galleryBaseUrl) {
@@ -143,40 +145,44 @@
         }
     }
 
-    function activeOverlayCount(n) {
-        if (n === 0) return 0;
-        return Math.max(1, Math.min(n - 1, MAX_ACTIVE_OVERLAYS));
+    // Loads `srcs` (relative to baseUrl) as Image objects and calls onAllSettled(imgs)
+    // once every one has either loaded or errored (errors are tolerated -- callers
+    // check img.complete/naturalWidth before drawing).
+    function loadImageSet(srcs, onAllSettled) {
+        var imgs = srcs.map(function () { return new Image(); });
+        var loaded = 0;
+        imgs.forEach(function (img, idx) {
+            function onSettled() {
+                loaded++;
+                if (loaded === srcs.length) onAllSettled(imgs);
+            }
+            img.onload = onSettled;
+            img.onerror = onSettled;
+            img.src = baseUrl + srcs[idx];
+        });
+        return imgs;
     }
 
     function createCompositeThumbnail(sequence) {
         var canvas = document.createElement('canvas');
         canvas.className = 'exposure-card-thumb-canvas';
         canvas.setAttribute('aria-hidden', 'true');
+        canvas._ctx = canvas.getContext('2d');
 
-        var srcs = [sequence.base].concat(sequence.overlays);
-        var imgs = srcs.map(function () { return new Image(); });
-        var loaded = 0;
-
-        function allLoaded() {
+        loadImageSet([sequence.base].concat(sequence.overlays), function (imgs) {
             var base = imgs[0];
             if (!base.complete || !base.naturalWidth) return;
             canvas._imgs = imgs;
 
+            // overlays.length is always >= 1 here (0-overlay sequences use
+            // createPlainThumbnail instead); exactly 1 pulses, 2+ rotates through
+            // at most MAX_ACTIVE_OVERLAYS at a time.
             if (sequence.overlays.length === 1) {
                 startCardPulse(canvas, imgs);
             } else {
-                var activeCount = activeOverlayCount(sequence.overlays.length);
-                if (activeCount > 0 && activeCount < sequence.overlays.length) {
-                    startCardRotation(canvas, imgs, activeCount);
-                }
+                startCardRotation(canvas, imgs, Math.min(sequence.overlays.length - 1, MAX_ACTIVE_OVERLAYS));
             }
             resizeCardCanvas(canvas);   // sets canvas.width/height to the card's actual displayed size and paints it
-        }
-
-        imgs.forEach(function (img, idx) {
-            img.onload = function () { loaded++; if (loaded === srcs.length) allLoaded(); };
-            img.onerror = function () { loaded++; if (loaded === srcs.length) allLoaded(); };
-            img.src = baseUrl + srcs[idx];
         });
 
         return canvas;
@@ -188,6 +194,21 @@
     // size keeps that redraw cheap. Canvas width/height writes clear the drawing
     // buffer, so this always repaints immediately after resizing.
     var CARD_CANVAS_MAX_PX = 1600;   // no point rendering the canvas larger than this
+
+    // Computes where a card's animation currently is: {elapsed} for a pulse, or
+    // {progress} for a rotation. Shared by resizeCardCanvas (an immediate repaint
+    // right after a resize) and tickCardAnimations (the per-frame redraw), so the
+    // two call sites can't drift out of sync with each other.
+    function computeCardFrame(state, timestamp) {
+        if (state.kind === 'pulse') {
+            return { elapsed: state.startTime === null ? 0 : timestamp - state.startTime };
+        }
+        var progress = 0;
+        if (state.transition && state.transition.startTime !== null) {
+            progress = Math.min(1, (timestamp - state.transition.startTime) / CARD_ROTATION_MS);
+        }
+        return { progress: progress };
+    }
 
     function resizeCardCanvas(canvas) {
         var imgs = canvas._imgs;
@@ -208,18 +229,16 @@
         canvas.width = targetWidth;
         canvas.height = targetHeight;
 
+        // A canvas only ever gets here after startCardPulse/startCardRotation has
+        // already registered its animation state (see createCompositeThumbnail),
+        // so cardAnimations.get(canvas) is always populated -- no static/no-animation
+        // fallback needed.
         var state = cardAnimations.get(canvas);
-        if (state && state.kind === 'pulse') {
-            var elapsed = state.startTime === null ? 0 : performance.now() - state.startTime;
-            drawPulsingCard(canvas, state, elapsed);
-        } else if (state) {
-            var progress = 0;
-            if (state.transition && state.transition.startTime !== null) {
-                progress = Math.min(1, (performance.now() - state.transition.startTime) / CARD_ROTATION_MS);
-            }
-            drawRotatingCard(canvas, state, progress);
+        var frame = computeCardFrame(state, performance.now());
+        if (state.kind === 'pulse') {
+            drawPulsingCard(canvas, state, frame.elapsed);
         } else {
-            drawStaticComposite(canvas, imgs);
+            drawRotatingCard(canvas, state, frame.progress);
         }
     }
 
@@ -230,18 +249,6 @@
             resizeAllRaf = null;
             document.querySelectorAll('.exposure-card-thumb-canvas').forEach(resizeCardCanvas);
         });
-    }
-
-    function drawStaticComposite(canvas, imgs) {
-        var ctx = canvas.getContext('2d');
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.drawImage(imgs[0], 0, 0, canvas.width, canvas.height);
-        for (var i = 1; i < imgs.length; i++) {
-            if (!imgs[i].complete || !imgs[i].naturalWidth) continue;
-            ctx.globalCompositeOperation = 'screen';
-            ctx.drawImage(imgs[i], 0, 0, canvas.width, canvas.height);
-        }
-        ctx.globalCompositeOperation = 'source-over';
     }
 
     // Consumed once, the first time an animation's startTime is set from null
@@ -285,7 +292,7 @@
         var amp = (1 - PULSE_MIN_ALPHA) / 2;
         var alpha = mid + amp * Math.cos(phase * 2 * Math.PI);       // 1 -> PULSE_MIN_ALPHA -> 1
 
-        var ctx = canvas.getContext('2d');
+        var ctx = canvas._ctx;
         ctx.globalCompositeOperation = 'source-over';
         ctx.drawImage(state.imgs[0], 0, 0, canvas.width, canvas.height);
         var overlay = state.imgs[1];
@@ -318,9 +325,10 @@
     // all of them from scratch on every frame.
     function rebuildSteadyLayer(canvas, state) {
         var sc = state.steadyCanvas || document.createElement('canvas');
+        if (!sc._ctx) sc._ctx = sc.getContext('2d');
         sc.width = canvas.width;
         sc.height = canvas.height;
-        var sctx = sc.getContext('2d');
+        var sctx = sc._ctx;
         sctx.globalCompositeOperation = 'source-over';
         sctx.drawImage(state.imgs[0], 0, 0, sc.width, sc.height);
         sctx.globalCompositeOperation = 'screen';
@@ -337,7 +345,7 @@
         if (!state.steadyCanvas || state.steadyCanvas.width !== canvas.width || state.steadyCanvas.height !== canvas.height) {
             rebuildSteadyLayer(canvas, state);
         }
-        var ctx = canvas.getContext('2d');
+        var ctx = canvas._ctx;
         var t = state.transition;
         ctx.globalCompositeOperation = 'source-over';
         ctx.drawImage(state.steadyCanvas, 0, 0);
@@ -379,8 +387,13 @@
         var shouldDraw = (timestamp - lastCardDrawTime) >= CARD_REDRAW_INTERVAL_MS;
         if (shouldDraw) lastCardDrawTime = timestamp;
 
-        cardAnimations.forEach(function (state, canvas) {
-            if (!canvas.isConnected) { stopCardAnimation(canvas); return; }
+        // Plain for-of instead of cardAnimations.forEach(...) -- this runs every
+        // frame for as long as any card is on screen, so it avoids allocating a
+        // new callback closure per tick.
+        for (var entry of cardAnimations) {
+            var canvas = entry[0];
+            var state = entry[1];
+            if (!canvas.isConnected) { stopCardAnimation(canvas); continue; }
 
             if (hitch > 0) {
                 if (typeof state.startTime === 'number') state.startTime += hitch;
@@ -389,13 +402,15 @@
 
             if (state.kind === 'pulse') {
                 if (state.startTime === null) state.startTime = timestamp - takeInitialOffset(state);
-                if (shouldDraw && visibleCanvases.has(canvas)) drawPulsingCard(canvas, state, timestamp - state.startTime);
-                return;
+                if (shouldDraw && visibleCanvases.has(canvas)) {
+                    drawPulsingCard(canvas, state, computeCardFrame(state, timestamp).elapsed);
+                }
+                continue;
             }
 
-            if (!state.transition) return;
+            if (!state.transition) continue;
             if (state.transition.startTime === null) state.transition.startTime = timestamp - takeInitialOffset(state);
-            var progress = Math.min(1, (timestamp - state.transition.startTime) / CARD_ROTATION_MS);
+            var progress = computeCardFrame(state, timestamp).progress;
             if (shouldDraw && visibleCanvases.has(canvas)) drawRotatingCard(canvas, state, progress);
             if (progress >= 1) {
                 var doneIdx = state.activeIndices.indexOf(state.transition.outIdx);
@@ -403,7 +418,7 @@
                 state.activeIndices.push(state.transition.inIdx);
                 beginNextCardTransition(state);
             }
-        });
+        }
         requestAnimationFrame(tickCardAnimations);
     }
     requestAnimationFrame(tickCardAnimations);
@@ -435,6 +450,9 @@
 
         document.body.appendChild(modal);
 
+        exposureCanvas = document.getElementById('exposure-canvas');
+        exposureCtx = exposureCanvas.getContext('2d');
+
         document.getElementById('multiple-exposure-viewer-close').addEventListener('click', closeModal);
         modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
         document.addEventListener('keydown', function (e) {
@@ -451,7 +469,7 @@
         }
         currentSequence = sequence;
         overlayImages = [];
-        overlaySettings = sequence.overlays.map(function () { return { enabled: false, currentAlpha: 0, targetAlpha: 0 }; });
+        overlaySettings = sequence.overlays.map(function () { return { enabled: false, currentAlpha: 0 }; });
 
         document.getElementById('multiple-exposure-viewer-title').textContent = sequence.base;
 
@@ -518,7 +536,7 @@
                     btn.classList.toggle('active', overlaySettings[idx].enabled);
                     btn.setAttribute('aria-pressed', String(overlaySettings[idx].enabled));
                     updateSelectAllBtn(selectAllBtn);
-                    setTargetAlpha(idx);
+                    setTargetAlpha();
                 });
             }(i));
             list.appendChild(btn);
@@ -531,8 +549,8 @@
                 s.enabled = enable;
                 overlayBtns[idx].classList.toggle('active', enable);
                 overlayBtns[idx].setAttribute('aria-pressed', String(enable));
-                setTargetAlpha(idx);
             });
+            setTargetAlpha();
             updateSelectAllBtn(selectAllBtn);
         });
 
@@ -546,45 +564,30 @@
 
     function loadImages(sequence) {
         var myGen = ++viewerLoadGen;
-        var canvas = document.getElementById('exposure-canvas');
-        var ctx = canvas.getContext('2d');
 
-        canvas.width = canvas.width || 400;
-        canvas.height = canvas.height || 300;
-        ctx.fillStyle = '#1a1a1a';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#888';
-        ctx.font = '14px Helvetica';
-        ctx.textAlign = 'center';
-        ctx.fillText('Loading...', canvas.width / 2, canvas.height / 2);
+        exposureCanvas.width = exposureCanvas.width || 400;
+        exposureCanvas.height = exposureCanvas.height || 300;
+        exposureCtx.fillStyle = '#1a1a1a';
+        exposureCtx.fillRect(0, 0, exposureCanvas.width, exposureCanvas.height);
+        exposureCtx.fillStyle = '#888';
+        exposureCtx.font = '14px Helvetica';
+        exposureCtx.textAlign = 'center';
+        exposureCtx.fillText('Loading...', exposureCanvas.width / 2, exposureCanvas.height / 2);
 
-        var allSrcs = [sequence.base].concat(sequence.overlays);
-        var imgs = allSrcs.map(function () { return new Image(); });
-        var loaded = 0;
-
-        imgs.forEach(function (img, idx) {
-            function onLoad() {
-                if (myGen !== viewerLoadGen) return;   // a newer sequence has since been opened; discard
-                loaded++;
-                if (idx === 0) {
-                    canvas.width = img.naturalWidth;
-                    canvas.height = img.naturalHeight;
-                }
-                if (loaded === allSrcs.length) {
-                    baseImage = imgs[0];
-                    overlayImages = imgs.slice(1);
-                    redraw();
-                }
+        loadImageSet([sequence.base].concat(sequence.overlays), function (imgs) {
+            if (myGen !== viewerLoadGen) return;   // a newer sequence has since been opened; discard
+            var base = imgs[0];
+            if (base.complete && base.naturalWidth) {
+                exposureCanvas.width = base.naturalWidth;
+                exposureCanvas.height = base.naturalHeight;
             }
-            img.onload = onLoad;
-            img.onerror = onLoad;
-            img.src = baseUrl + allSrcs[idx];
+            baseImage = imgs[0];
+            overlayImages = imgs.slice(1);
+            redraw();
         });
     }
 
-    function setTargetAlpha(idx) {
-        var s = overlaySettings[idx];
-        s.targetAlpha = s.enabled ? 1.0 : 0.0;
+    function setTargetAlpha() {
         if (animFrameId !== null) cancelAnimationFrame(animFrameId);
         lastTimestamp = null;
         animFrameId = requestAnimationFrame(animationStep);
@@ -595,16 +598,18 @@
         lastTimestamp = timestamp;
 
         var stillAnimating = false;
-        overlaySettings.forEach(function (settings) {
-            var diff = settings.targetAlpha - settings.currentAlpha;
+        for (var i = 0; i < overlaySettings.length; i++) {
+            var settings = overlaySettings[i];
+            var target = settings.enabled ? 1 : 0;
+            var diff = target - settings.currentAlpha;
             if (Math.abs(diff) > 0.001) {
                 settings.currentAlpha += (diff > 0 ? 1 : -1) * dt / TRANSITION_MS;
                 settings.currentAlpha = Math.max(0, Math.min(1, settings.currentAlpha));
                 stillAnimating = true;
             } else {
-                settings.currentAlpha = settings.targetAlpha;
+                settings.currentAlpha = target;
             }
-        });
+        }
 
         redraw();
 
@@ -619,9 +624,8 @@
     function redraw() {
         if (!baseImage || !baseImage.complete) return;
 
-        var canvas = document.getElementById('exposure-canvas');
-        var ctx = canvas.getContext('2d');
-        var blendMode = 'screen';
+        var canvas = exposureCanvas;
+        var ctx = exposureCtx;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -629,13 +633,14 @@
         ctx.globalCompositeOperation = 'source-over';
         ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
 
-        overlaySettings.forEach(function (settings, i) {
-            if (settings.currentAlpha <= 0) return;
-            if (!overlayImages[i] || !overlayImages[i].complete) return;
+        for (var i = 0; i < overlaySettings.length; i++) {
+            var settings = overlaySettings[i];
+            if (settings.currentAlpha <= 0) continue;
+            if (!overlayImages[i] || !overlayImages[i].complete) continue;
             ctx.globalAlpha = settings.currentAlpha;
-            ctx.globalCompositeOperation = blendMode;
+            ctx.globalCompositeOperation = 'screen';
             ctx.drawImage(overlayImages[i], 0, 0, canvas.width, canvas.height);
-        });
+        }
 
         ctx.globalAlpha = 1.0;
         ctx.globalCompositeOperation = 'source-over';

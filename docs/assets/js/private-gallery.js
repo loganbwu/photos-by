@@ -32,16 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const albumNameFromUrl = urlParams.get('album');
-        if (albumNameFromUrl) {
-            albumNameInput.value = albumNameFromUrl.toLowerCase();
-            requestAnimationFrame(() => { submitButton.click(); });
-        }
-
-        albumNameForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const albumName = albumNameInput.value.toLowerCase();
+        async function submitAlbum(albumName) {
             if (!albumName) {
                 displayError('Please enter an album name.');
                 return;
@@ -52,6 +43,19 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadAlbum(albumName);
             submitButton.disabled = false;
             submitButton.textContent = 'View Gallery';
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const albumNameFromUrl = urlParams.get('album');
+        if (albumNameFromUrl) {
+            const albumName = albumNameFromUrl.toLowerCase();
+            albumNameInput.value = albumName;
+            submitAlbum(albumName);
+        }
+
+        albumNameForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            submitAlbum(albumNameInput.value.toLowerCase());
         });
     }
 
@@ -63,33 +67,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ album_name: albumName }),
             });
 
-            if (response.ok) {
-                const data = await response.json();
-                if (data.base_url && data.images && data.images.length > 0) {
-                    albumAccessSection.style.display = 'none';
-                    galleryContainer.style.display = '';
-
-                    // The GCS manifest is either a plain array of filenames (old format)
-                    // or { images: [...], sequences: [...] } (new format). Normalise so
-                    // the rest of the code is consistent.
-                    let manifest = data.manifest;
-                    let sequences = [];
-                    if (manifest && !Array.isArray(manifest) && typeof manifest === 'object') {
-                        sequences = manifest.sequences || [];
-                        manifest = manifest.images || [];
-                    }
-
-                    if (typeof window.initMultipleExposureViewer === 'function' && sequences.length > 0) {
-                        window.initMultipleExposureViewer(sequences, data.base_url);
-                    } else {
-                        populateGallery(data.base_url, data.images, manifest);
-                    }
-                } else {
-                    displayError('No images found for the provided album name, or the gallery is empty.');
-                }
-            } else {
+            if (!response.ok) {
                 const errorData = await response.json().catch(() => null);
                 displayError(errorData?.detail || `Error: ${response.status} - ${response.statusText}`);
+                return;
+            }
+
+            const data = await response.json();
+            if (!data.base_url || !data.images || !data.images.length) {
+                displayError('No images found for the provided album name, or the gallery is empty.');
+                return;
+            }
+
+            albumAccessSection.style.display = 'none';
+            galleryContainer.style.display = '';
+
+            // The GCS manifest is either a plain array of filenames (old format)
+            // or { images: [...], sequences: [...] } (new format). Normalise so
+            // the rest of the code is consistent.
+            let manifest = data.manifest;
+            let sequences = [];
+            if (manifest && !Array.isArray(manifest) && typeof manifest === 'object') {
+                sequences = manifest.sequences || [];
+                manifest = manifest.images || [];
+            }
+
+            if (typeof window.initMultipleExposureViewer === 'function' && sequences.length > 0) {
+                window.initMultipleExposureViewer(sequences, data.base_url);
+            } else {
+                populateGallery(data.base_url, data.images, manifest);
             }
         } catch (error) {
             console.error('Error loading album:', error);
@@ -106,24 +112,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // If a manifest is provided, sort the images array before rendering
-        if (manifest && Array.isArray(manifest) && manifest.length > 0) {
-            console.log("Manifest found, sorting images before initial render.");
-            const manifestOrder = manifest.reduce((acc, name, index) => {
-                acc[name] = index;
-                return acc;
-            }, {});
-
-            images.sort((a, b) => {
-                const aIndex = manifestOrder[a];
-                const bIndex = manifestOrder[b];
-                // If a file isn't in the manifest, push it to the end.
-                if (aIndex === undefined) return 1;
-                if (bIndex === undefined) return -1;
-                return aIndex - bIndex;
-            });
-        }
-
+        // Rendered in whatever order they're appended here, but gallery.js's
+        // processAndRenderGallery() (called below) sorts by the same manifest
+        // again before the grid layout is actually built, so pre-sorting here
+        // would be redundant.
         images.forEach(imageName => {
             const imgElement = document.createElement('img');
             imgElement.className = 'gallery-image-source grid__item-image-lazy js-lazy';
