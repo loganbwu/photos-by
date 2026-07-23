@@ -224,7 +224,7 @@ document.addEventListener('keydown', function(event) {
 window.initializeLightboxStateAndListeners = function(isPrivateView = false) {
   isPrivate = isPrivateView;
   images = []; // Clear existing images before repopulating
-  const galleryImages = document.querySelectorAll('.grid__item-image');
+  const galleryImages = document.querySelectorAll('.grid__item-image:not(.js-no-lightbox)');
   galleryImages.forEach((img, index) => {
     const filename = img.src.split('?')[0].split('/').pop();
     images.push({ src: img.src, filename: filename }); // Populate the images array

@@ -2,6 +2,8 @@
 let allImageObjects = [];
 let galleryNode = null;
 let isPrivateGalleryView = false; // Flag to control private gallery features
+let galleryLinkMode = null; // When 'album', thumbnails link to another album instead of opening the lightbox
+let desktopImagesPerRowOverride = null; // Per-gallery override of the wide-screen images-per-row count
 const SMALL_SCREEN_BREAKPOINT = 768; // px, screens narrower than this will show 2 images per row
 
 // Debounce function to limit how often renderGallery is called on resize
@@ -20,8 +22,10 @@ function debounce(func, wait, immediate) {
     };
 }
 
-function processAndRenderGallery(isPrivate = false, manifest = null) {
+function processAndRenderGallery(isPrivate = false, manifest = null, linkMode = null, imagesPerRowOverride = null) {
     isPrivateGalleryView = isPrivate; // Set the flag for this gallery view
+    galleryLinkMode = linkMode;
+    desktopImagesPerRowOverride = imagesPerRowOverride;
     galleryNode = document.getElementById('image-gallery-container');
     if (!galleryNode) {
         console.warn('Gallery container #image-gallery-container not found. Aspect ratio script will not run.');
@@ -121,7 +125,7 @@ function renderGallery() {
     galleryNode.innerHTML = ''; // Clear the container of the original unprocessed images or previous render
 
     const screenWidth = window.innerWidth;
-    const imagesPerRow = screenWidth < SMALL_SCREEN_BREAKPOINT ? 2 : 3;
+    const imagesPerRow = screenWidth < SMALL_SCREEN_BREAKPOINT ? 2 : (desktopImagesPerRowOverride || 3);
 
     const rows = [];
     for (let i = 0; i < allImageObjects.length; i += imagesPerRow) {
@@ -141,8 +145,14 @@ function renderGallery() {
         }, 0);
 
         rowImages.forEach(imgData => {
-            const itemContainer = document.createElement('div');
+            const isLinkThumb = galleryLinkMode === 'album';
+            const runNumber = imgData.filename.replace(/\.[^.]+$/, '');
+
+            const itemContainer = document.createElement(isLinkThumb ? 'a' : 'div');
             itemContainer.className = 'grid__item-container js-grid-item-container image-container';
+            if (isLinkThumb) {
+                itemContainer.href = `../albums/?album=${encodeURIComponent(runNumber)}`;
+            }
 
             const currentImageAspectRatio = typeof imgData.aspectRatio === 'number' && !isNaN(imgData.aspectRatio) ? imgData.aspectRatio : 1;
             // Ensure rowAspectRatioSum is not zero to prevent division by zero
@@ -152,8 +162,8 @@ function renderGallery() {
             const newImgElement = document.createElement('img');
             newImgElement.src = imgData.element.src;
             newImgElement.alt = imgData.element.alt || '';
-            
-            newImgElement.className = imgData.element.className.replace('gallery-image-source', '').trim() 
+
+            newImgElement.className = imgData.element.className.replace('gallery-image-source', '').trim()
                                      || 'grid__item-image js-grid__item-image grid__item-image-lazy js-lazy';
             if (!newImgElement.classList.contains('grid__item-image')) {
                 newImgElement.classList.add('grid__item-image');
@@ -166,9 +176,14 @@ function renderGallery() {
             newImgElement.style.height = '100%';
             newImgElement.style.objectFit = 'cover';
 
-            const onclickAttribute = imgData.element.getAttribute('onclick');
-            if (onclickAttribute) {
-                newImgElement.setAttribute('onclick', onclickAttribute);
+            if (isLinkThumb) {
+                // Link-mode thumbnails navigate to another album; keep them out of the lightbox.
+                newImgElement.classList.add('js-no-lightbox');
+            } else {
+                const onclickAttribute = imgData.element.getAttribute('onclick');
+                if (onclickAttribute) {
+                    newImgElement.setAttribute('onclick', onclickAttribute);
+                }
             }
 
             // Prevent right-click context menu
@@ -176,14 +191,14 @@ function renderGallery() {
 
             itemContainer.appendChild(newImgElement);
 
-            // Conditionally add the overlay for private galleries
-            if (isPrivateGalleryView) {
+            // Conditionally add the overlay for private galleries and link-mode thumbnails
+            if (isPrivateGalleryView || isLinkThumb) {
                 const overlay = document.createElement('div');
                 overlay.className = 'filename-label filename-overlay';
-                overlay.textContent = imgData.filename;
+                overlay.textContent = isLinkThumb ? runNumber : imgData.filename;
                 itemContainer.appendChild(overlay);
             }
-            
+
             rowElement.appendChild(itemContainer);
         });
         galleryNode.appendChild(rowElement);

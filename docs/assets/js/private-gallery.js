@@ -92,10 +92,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 manifest = manifest.images || [];
             }
 
+            const linkMode = albumAccessSection.dataset.linkMode || null;
+            const imagesPerRowOverride = parseInt(albumAccessSection.dataset.imagesPerRow, 10) || null;
+
             if (typeof window.initMultipleExposureViewer === 'function' && sequences.length > 0) {
                 window.initMultipleExposureViewer(sequences, data.base_url);
             } else {
-                populateGallery(data.base_url, data.images, manifest);
+                populateGallery(data.base_url, data.images, manifest, linkMode, imagesPerRowOverride);
             }
         } catch (error) {
             console.error('Error loading album:', error);
@@ -103,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function populateGallery(baseUrl, images, manifest = null) {
+    function populateGallery(baseUrl, images, manifest = null, linkMode = null, imagesPerRowOverride = null) {
         if (!galleryContainer) return;
         galleryContainer.innerHTML = ''; // Clear any existing content
 
@@ -127,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Now that the images are in the DOM, call the global function from gallery.js
         // to process them into the grid layout, passing the manifest.
         if (typeof window.processAndRenderGallery === 'function') {
-            window.processAndRenderGallery(true, manifest); // Pass true for private galleries and the manifest
+            window.processAndRenderGallery(true, manifest, linkMode, imagesPerRowOverride); // Pass true for private galleries, the manifest, the link mode, and the per-row override
         } else {
             console.error('processAndRenderGallery function not found. The main gallery script may have failed to load.');
             displayError('Error displaying gallery. Please refresh and try again.');

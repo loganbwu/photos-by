@@ -156,6 +156,8 @@ header nav a:hover {
   /* padding: 5px; */ /* Replaced by CSS variable */
   padding: calc(var(--gallery-spacing, 10px) / 2); /* Default to 10px gap if variable not set */
   box-sizing: border-box;
+  text-decoration: none; /* When rendered as <a> (link-mode thumbnails) */
+  color: inherit;
 }
 
 .grid__item-container:hover {
