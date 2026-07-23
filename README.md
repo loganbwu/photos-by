@@ -182,6 +182,12 @@ cd backend && rye run make-slideshow /path/to/photos [output.mp4] [--tail SECOND
 > ```
 > Requires `Pillow` (already a backend dependency).
 
+> **Thumbnail per tag:** To pick one representative thumbnail per keyword tag (e.g. building a run-number preview gallery), `scripts/first_by_tag.py` reads every image's IPTC keywords and EXIF capture date, then copies the earliest-captured photo for each distinct keyword into an output folder, named after the keyword (e.g. keyword `40` -> `40.jpg`).
+> ```bash
+> cd backend && rye run first-by-tag /path/to/flat/export [output_folder]
+> ```
+> Defaults to `<folder>/thumbnails` if `output_folder` is omitted.
+
 1.  **Create a Client Folder:** Inside `backend/gcs_local_staging/`, create a new folder. The folder name will be the gallery password (e.g., `client-jane-doe`).
 2.  **Add Photos:** Copy the client's photos into the new folder.
 3.  **Sync to GCS:** From the `backend` directory, run the sync script:

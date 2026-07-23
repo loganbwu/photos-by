@@ -21,6 +21,7 @@ build-backend = "hatchling.build"
 [tool.rye.scripts]
 sync-gcs = { cmd = "python ../scripts/sync_gcs.py" }
 sort-by-tag = { cmd = "python ../scripts/sort_by_tag.py" }
+first-by-tag = { cmd = "python ../scripts/first_by_tag.py" }
 make-slideshow = { cmd = "python ../scripts/make_slideshow.py" }
 timelapse = { cmd = "python ../scripts/timelapse.py" }
 stitch-gopro = { cmd = "python ../scripts/stitch_gopro.py" }
