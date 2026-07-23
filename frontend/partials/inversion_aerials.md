@@ -4,7 +4,7 @@ Thank you for performing at Inversion! This page contains details on how to acce
 
 ## Previews
 
-Find your run number below and click your thumbnail to view your full album.
+Find your run number below and click the thumbnail to view your previews.
 
 <div id="album-access" data-album="inversion_aerials_thumbnails" data-link-mode="album" data-images-per-row="5"></div>
 <p id="error-message" style="color: firebrick; display: none;"></p>
