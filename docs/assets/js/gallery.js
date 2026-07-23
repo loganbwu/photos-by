@@ -132,17 +132,21 @@ function renderGallery() {
         const rowElement = document.createElement('div');
         rowElement.className = 'grid__row';
 
+        // A short last row (fewer than imagesPerRow images) should size its
+        // photos as if the row were full-width, not stretch them to fill it.
+        const rowScale = rowImages.length / imagesPerRow;
+
         const rowAspectRatioSum = rowImages.reduce((sum, imgData) => {
             return sum + (typeof imgData.aspectRatio === 'number' && !isNaN(imgData.aspectRatio) ? imgData.aspectRatio : 1);
         }, 0);
 
         rowImages.forEach(imgData => {
             const itemContainer = document.createElement('div');
-            itemContainer.className = 'grid__item-container js-grid-item-container image-container'; 
-            
+            itemContainer.className = 'grid__item-container js-grid-item-container image-container';
+
             const currentImageAspectRatio = typeof imgData.aspectRatio === 'number' && !isNaN(imgData.aspectRatio) ? imgData.aspectRatio : 1;
             // Ensure rowAspectRatioSum is not zero to prevent division by zero
-            const flexBasis = rowAspectRatioSum > 0 ? (currentImageAspectRatio / rowAspectRatioSum) * 100 : (100 / rowImages.length);
+            const flexBasis = (rowAspectRatioSum > 0 ? (currentImageAspectRatio / rowAspectRatioSum) * 100 : (100 / rowImages.length)) * rowScale;
             itemContainer.style.flexBasis = `${flexBasis}%`;
 
             const newImgElement = document.createElement('img');
