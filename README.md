@@ -160,6 +160,22 @@ cd backend && rye run stitch-gopro /path/to/gopro/folder [output_folder]
 
 ---
 
+### Denoising Video Footage
+
+`scripts/denoise_videos.py` recursively finds every video in a folder and denoises it with ffmpeg's `vaguedenoiser` filter (moderate settings). Large files are chunked and encoded in parallel, with a single progress bar (chunks completed + ETA) across the whole batch.
+
+```bash
+cd backend && rye run denoise-videos /path/to/folder [--mbps N] [--overwrite]
+```
+
+- By default, writes a `<name>_denoised<ext>` copy alongside each source file (originals untouched)
+- **`--mbps`** — target video bitrate in Mbps (default: match each source file's own bitrate)
+- **`--overwrite`** — replace each source file in place instead of writing a separate copy. True in-place transcoding isn't possible, so this still encodes to a temp file first and swaps it in once validated, but processes one file at a time so at most one file's worth of extra disk space is ever in use, rather than the whole batch's
+- If the run looks likely to push disk usage past 90%, you'll be warned and prompted to confirm, with a suggestion to use `--overwrite` if you aren't already
+- Requires `ffmpeg` on PATH (`brew install ffmpeg`); uses `hevc_videotoolbox` hardware encoding when available (Apple Silicon)
+
+---
+
 ### Creating a Slideshow for Event Sync
 
 `scripts/make_slideshow.py` takes a folder of images and produces an MP4 where each photo holds until the next one, timed by EXIF capture date (`DateTimeOriginal`). The output can be dropped into a video editor alongside footage from the same event to sync shots to the timeline.
