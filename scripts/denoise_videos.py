@@ -13,6 +13,7 @@ available (Apple Silicon), falling back to libx265.
 """
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -27,7 +28,7 @@ VIDEO_EXTS = {'.mp4', '.mov', '.m4v', '.avi', '.mkv', '.mts', '.m2ts', '.wmv', '
 CONTAINER_PASSTHROUGH_EXTS = {'.mp4', '.mov', '.m4v', '.mts', '.m2ts'}  # can hold HEVC as-is
 
 SEG_LEN = 300  # seconds per chunk for large files
-WORKERS = 6
+WORKERS = max(1, (os.cpu_count() or 2) - 1)  # leave one core free for the rest of the machine
 
 # vaguedenoiser: wavelet-based denoiser. These are "moderate" settings — enough
 # to clean sensor noise without visibly softening detail.
