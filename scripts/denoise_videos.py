@@ -11,7 +11,9 @@ parallel, instead of the whole batch's worth of extra space at once).
 
 Long videos are split into chunks and encoded in parallel for speed (within
 a file, and — in default mode only — across files too), then reassembled.
-A single progress bar tracks chunks completed across the whole batch, with ETA.
+A single progress bar tracks chunks completed across the whole batch, with ETA
+— updated continuously from ffmpeg's own progress stream as each chunk encodes,
+not just when a chunk finishes, so it won't look stalled on heavy footage.
 
 If the run looks likely to push disk usage past 90%, you'll be warned and
 asked to confirm, with a suggestion to use --overwrite if you aren't already.
@@ -28,6 +30,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -226,29 +229,68 @@ def confirm_disk_space(folder: Path, jobs: list[FileJob], mbps: float | None, ov
         sys.exit(1)
 
 
+def _run_with_progress(cmd: list[str], duration_hint: float, pbar: tqdm, lock: threading.Lock) -> tuple[int, str]:
+    """Run ffmpeg, nudging pbar continuously (by fraction of one segment) as -progress
+    reports how far into duration_hint seconds of output it's gotten — rather than only
+    once the whole segment finishes, which can otherwise leave the bar looking stalled
+    for a long time on heavy footage.
+    """
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+    stderr_chunks: list[str] = []
+    def _drain_stderr() -> None:
+        for chunk in proc.stderr:
+            stderr_chunks.append(chunk)
+    stderr_thread = threading.Thread(target=_drain_stderr, daemon=True)
+    stderr_thread.start()
+
+    last_frac = 0.0
+    for line in proc.stdout:
+        if not line.startswith('out_time_ms='):
+            continue
+        raw = line.strip().split('=', 1)[1]
+        if raw in ('N/A', ''):
+            continue
+        frac = min(int(raw) / 1_000_000 / duration_hint, 1.0) if duration_hint > 0 else 1.0
+        if frac > last_frac:
+            with lock:
+                pbar.update(frac - last_frac)
+            last_frac = frac
+
+    proc.wait()
+    stderr_thread.join()
+    if last_frac < 1.0:
+        with lock:
+            pbar.update(1.0 - last_frac)
+    return proc.returncode, ''.join(stderr_chunks)
+
+
 def encode_segment(job: FileJob, seg_idx: int, tmp_dir: Path, encoder: list[str],
-                    hardware: bool, mbps: float | None) -> tuple[FileJob, int, Path | None]:
+                    hardware: bool, mbps: float | None, pbar: tqdm,
+                    lock: threading.Lock) -> tuple[FileJob, int, Path | None]:
     fmt, profile = pixel_args(job.pix_fmt, hardware)
     vf = f"{DENOISE_FILTER},{fmt}" if fmt else DENOISE_FILTER
 
     whole = job.num_segments == 1
     tmp_out = tmp_dir / f"{job.index:04d}_{seg_idx:04d}.mp4"
 
-    cmd = ['ffmpeg', '-y', '-nostdin', '-loglevel', 'error']
+    seg_duration = job.duration
+    cmd = ['ffmpeg', '-y', '-nostdin', '-loglevel', 'error', '-progress', 'pipe:1', '-nostats']
     if not whole:
         cmd += ['-ss', str(seg_idx * SEG_LEN)]
     cmd += ['-i', str(job.path)]
     if not whole:
         remaining = job.duration - seg_idx * SEG_LEN
-        cmd += ['-t', str(min(SEG_LEN, remaining) + (2 if remaining < SEG_LEN else 0))]
+        seg_duration = min(SEG_LEN, remaining) + (2 if remaining < SEG_LEN else 0)
+        cmd += ['-t', str(seg_duration)]
     cmd += ['-vf', vf, *encoder, *profile, *bitrate_args(mbps, job.bit_rate)]
     if whole and job.timecode:
         cmd += ['-timecode', job.timecode]
     cmd += ['-c:a', 'copy', str(tmp_out)]
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0 or not is_valid_video(tmp_out):
-        tqdm.write(f"  ERROR encoding {job.path.name} (segment {seg_idx}):\n{result.stderr.strip()[-500:]}")
+    returncode, stderr = _run_with_progress(cmd, seg_duration, pbar, lock)
+    if returncode != 0 or not is_valid_video(tmp_out):
+        tqdm.write(f"  ERROR encoding {job.path.name} (segment {seg_idx}):\n{stderr.strip()[-500:]}")
         tmp_out.unlink(missing_ok=True)
         return job, seg_idx, None
     return job, seg_idx, tmp_out
@@ -299,11 +341,10 @@ def finalize(job: FileJob, overwrite: bool) -> bool:
     return True
 
 
-def _drain(futures, pbar) -> None:
+def _drain(futures) -> None:
     for future in as_completed(futures):
         job, seg_idx, seg_path = future.result()
         job.segments_done[seg_idx] = seg_path
-        pbar.update(1)
 
 
 def run(folder: Path, mbps: float | None, overwrite: bool) -> None:
@@ -331,6 +372,7 @@ def run(folder: Path, mbps: float | None, overwrite: bool) -> None:
     print(f"{len(jobs)} file(s) to denoise, {total_segments} segment(s) total\n")
 
     succeeded = failed = skipped = 0
+    lock = threading.Lock()
     with tempfile.TemporaryDirectory(prefix='denoise_videos_') as tmp_dir_str:
         tmp_dir = Path(tmp_dir_str)
         with tqdm(total=total_segments, desc="Denoising", unit="seg") as pbar, \
@@ -347,23 +389,23 @@ def run(folder: Path, mbps: float | None, overwrite: bool) -> None:
                         skipped += 1
                         continue
 
-                    futures = [pool.submit(encode_segment, job, seg_idx, tmp_dir, encoder, hardware, mbps)
+                    futures = [pool.submit(encode_segment, job, seg_idx, tmp_dir, encoder, hardware,
+                                            mbps, pbar, lock)
                                for seg_idx in range(job.num_segments)]
-                    _drain(futures, pbar)
+                    _drain(futures)
                     if finalize(job, overwrite):
                         succeeded += 1
                     else:
                         failed += 1
             else:
                 futures = [
-                    pool.submit(encode_segment, job, seg_idx, tmp_dir, encoder, hardware, mbps)
+                    pool.submit(encode_segment, job, seg_idx, tmp_dir, encoder, hardware, mbps, pbar, lock)
                     for job in jobs
                     for seg_idx in range(job.num_segments)
                 ]
                 for future in as_completed(futures):
                     job, seg_idx, seg_path = future.result()
                     job.segments_done[seg_idx] = seg_path
-                    pbar.update(1)
 
                     if len(job.segments_done) == job.num_segments:
                         if finalize(job, overwrite):
