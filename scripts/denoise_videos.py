@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 """Denoise every video in a folder (recursively) using ffmpeg's vaguedenoiser filter.
 
-Each video is left untouched — output is written alongside it as
-<name>_denoised<ext> (skipped if that file already exists). Long videos are
-split into chunks and encoded in parallel for speed, then reassembled; a
-single progress bar tracks chunks completed across the whole batch, with ETA.
+By default each video is left untouched — output is written alongside it as
+<name>_denoised<ext> (skipped if that file already exists). With --overwrite,
+each source file is replaced in place instead (there's no way to transcode a
+video into its own bytes, so this still encodes to a temp file first and
+swaps it in once validated — but only one file's worth of extra space is
+ever in use at a time, and files are processed one at a time rather than in
+parallel, instead of the whole batch's worth of extra space at once).
 
-Usage: python3 denoise_videos.py <folder> [--mbps MBPS]
+Long videos are split into chunks and encoded in parallel for speed (within
+a file, and — in default mode only — across files too), then reassembled.
+A single progress bar tracks chunks completed across the whole batch, with ETA.
+
+If the run looks likely to push disk usage past 90%, you'll be warned and
+asked to confirm, with a suggestion to use --overwrite if you aren't already.
+
+Usage: python3 denoise_videos.py <folder> [--mbps MBPS] [--overwrite]
 
 Requires ffmpeg on PATH. Uses hevc_videotoolbox hardware encoding when
 available (Apple Silicon), falling back to libx265.
@@ -29,6 +39,7 @@ CONTAINER_PASSTHROUGH_EXTS = {'.mp4', '.mov', '.m4v', '.mts', '.m2ts'}  # can ho
 
 SEG_LEN = 300  # seconds per chunk for large files
 WORKERS = max(1, (os.cpu_count() or 2) - 1)  # leave one core free for the rest of the machine
+DISK_WARN_PCT = 90
 
 # vaguedenoiser: wavelet-based denoiser. These are "moderate" settings — enough
 # to clean sensor noise without visibly softening detail.
@@ -39,7 +50,8 @@ DENOISE_FILTER = 'vaguedenoiser=threshold=2:method=soft:nsteps=6:percent=85'
 class FileJob:
     index: int
     path: Path
-    output: Path
+    output: Path      # working path ffmpeg actually writes to
+    final_path: Path  # where `output` ends up once validated (== path itself when overwriting)
     duration: float
     bit_rate: int | None
     pix_fmt: str | None
@@ -117,20 +129,53 @@ def bitrate_args(mbps: float | None, source_bit_rate: int | None) -> list[str]:
 def discover_videos(folder: Path) -> list[Path]:
     return sorted(
         p for p in folder.rglob('*')
-        if p.is_file() and p.suffix.lower() in VIDEO_EXTS and not p.stem.endswith('_denoised')
+        if p.is_file() and p.suffix.lower() in VIDEO_EXTS
+        and not p.stem.endswith('_denoised')
+        and not p.name.startswith('.')  # skip our own leftover .*.denoising.tmp* files
     )
 
 
-def output_path_for(video: Path) -> Path:
+def cleanup_stale_temp_files(folder: Path) -> None:
+    """Remove .*.denoising.tmp* files left behind by a previous run that got interrupted."""
+    for p in folder.rglob('.*.denoising.tmp*'):
+        if p.is_file():
+            print(f"  Removing stale temp file from an interrupted run: {p.name}")
+            p.unlink(missing_ok=True)
+
+
+def final_path_for(video: Path, overwrite: bool) -> Path:
+    if overwrite:
+        # Same container extensions can hold HEVC as-is and get replaced under
+        # their original name; anything else (e.g. .avi) gets swapped to .mp4 —
+        # the old file is still deleted, just under a different final name.
+        if video.suffix.lower() in CONTAINER_PASSTHROUGH_EXTS:
+            return video
+        return video.with_suffix('.mp4')
     ext = video.suffix if video.suffix.lower() in CONTAINER_PASSTHROUGH_EXTS else '.mp4'
     return video.parent / f"{video.stem}_denoised{ext}"
 
 
-def build_jobs(files: list[Path]) -> list[FileJob]:
+def working_path_for(video: Path, final: Path, overwrite: bool) -> Path:
+    if not overwrite:
+        return final  # no name collision with the source, safe to encode directly into it
+    # Dot-prefixed temp name next to the source, guaranteeing the same filesystem
+    # so the final swap is an instant rename rather than a second copy.
+    return video.with_name(f".{video.stem}.denoising.tmp{final.suffix}")
+
+
+def estimate_output_bytes(duration: float, bit_rate: int | None, mbps: float | None, path: Path) -> int:
+    if mbps is not None:
+        return int(duration * mbps * 1_000_000 / 8)
+    if bit_rate:
+        return int(duration * bit_rate / 8)
+    return path.stat().st_size  # best-effort fallback: assume similar size to the source
+
+
+def build_jobs(files: list[Path], overwrite: bool) -> list[FileJob]:
     jobs = []
     for i, video in enumerate(files):
-        output = output_path_for(video)
-        if output.exists():
+        final_path = final_path_for(video, overwrite)
+        if not overwrite and final_path.exists():
             print(f"  SKIP (already denoised): {video.name}")
             continue
 
@@ -143,7 +188,8 @@ def build_jobs(files: list[Path]) -> list[FileJob]:
         jobs.append(FileJob(
             index=i,
             path=video,
-            output=output,
+            output=working_path_for(video, final_path, overwrite),
+            final_path=final_path,
             duration=duration,
             bit_rate=get_bit_rate(video),
             pix_fmt=get_pix_fmt(video),
@@ -151,6 +197,33 @@ def build_jobs(files: list[Path]) -> list[FileJob]:
             num_segments=num_segments,
         ))
     return jobs
+
+
+def disk_usage_pct(folder: Path, extra_bytes: int) -> float:
+    usage = shutil.disk_usage(folder)
+    return (usage.used + extra_bytes) / usage.total * 100
+
+
+def confirm_disk_space(folder: Path, jobs: list[FileJob], mbps: float | None, overwrite: bool) -> None:
+    estimates = [estimate_output_bytes(j.duration, j.bit_rate, mbps, j.path) for j in jobs]
+    # Overwrite mode processes one file at a time and frees each original before
+    # starting the next, so the peak extra usage is one file's worth, not the batch's.
+    peak_extra = max(estimates, default=0) if overwrite else sum(estimates)
+
+    projected = disk_usage_pct(folder, peak_extra)
+    if projected <= DISK_WARN_PCT:
+        return
+
+    print(f"\nWARNING: this run is projected to push disk usage to about {projected:.0f}% "
+          f"(threshold {DISK_WARN_PCT}%).")
+    if not overwrite:
+        print("Re-run with --overwrite to replace each source file in place instead of "
+              "keeping both the original and the denoised copy — that needs roughly one "
+              "file's worth of extra space at a time instead of the whole batch's.")
+    answer = input("Continue anyway? [y/N]: ").strip().lower()
+    if answer != 'y':
+        print("Aborted.")
+        sys.exit(1)
 
 
 def encode_segment(job: FileJob, seg_idx: int, tmp_dir: Path, encoder: list[str],
@@ -181,7 +254,7 @@ def encode_segment(job: FileJob, seg_idx: int, tmp_dir: Path, encoder: list[str]
     return job, seg_idx, tmp_out
 
 
-def finalize(job: FileJob) -> bool:
+def finalize(job: FileJob, overwrite: bool) -> bool:
     segments = [job.segments_done[i] for i in range(job.num_segments)]
     if any(s is None for s in segments):
         tqdm.write(f"  FAILED: {job.path.name} (one or more segments failed to encode)")
@@ -214,53 +287,94 @@ def finalize(job: FileJob) -> bool:
             job.output.unlink(missing_ok=True)
             return False
 
-    size_mb = job.output.stat().st_size / 1_048_576
-    tqdm.write(f"  Saved: {job.output.name}  ({size_mb:.0f} MB)")
+    if overwrite:
+        # Atomic rename on the same filesystem — overwrites final_path if it already
+        # exists (the same-name case), and is a directory-entry swap, not a copy.
+        job.output.replace(job.final_path)
+        if job.final_path != job.path:
+            job.path.unlink(missing_ok=True)
+
+    size_mb = job.final_path.stat().st_size / 1_048_576
+    tqdm.write(f"  Saved: {job.final_path.name}  ({size_mb:.0f} MB)")
     return True
 
 
-def run(folder: Path, mbps: float | None) -> None:
+def _drain(futures, pbar) -> None:
+    for future in as_completed(futures):
+        job, seg_idx, seg_path = future.result()
+        job.segments_done[seg_idx] = seg_path
+        pbar.update(1)
+
+
+def run(folder: Path, mbps: float | None, overwrite: bool) -> None:
     if not shutil.which('ffmpeg') or not shutil.which('ffprobe'):
         print("ffmpeg/ffprobe not found on PATH. Install with: brew install ffmpeg")
         sys.exit(1)
+
+    cleanup_stale_temp_files(folder)
 
     files = discover_videos(folder)
     print(f"Found {len(files)} video file(s) in {folder}\n")
     if not files:
         sys.exit(0)
 
-    jobs = build_jobs(files)
+    jobs = build_jobs(files, overwrite)
     if not jobs:
         print("\nNothing to do.")
         sys.exit(0)
+
+    confirm_disk_space(folder, jobs, mbps, overwrite)
 
     encoder = pick_encoder()
     hardware = encoder[1] == 'hevc_videotoolbox'
     total_segments = sum(j.num_segments for j in jobs)
     print(f"{len(jobs)} file(s) to denoise, {total_segments} segment(s) total\n")
 
-    succeeded = failed = 0
+    succeeded = failed = skipped = 0
     with tempfile.TemporaryDirectory(prefix='denoise_videos_') as tmp_dir_str:
         tmp_dir = Path(tmp_dir_str)
         with tqdm(total=total_segments, desc="Denoising", unit="seg") as pbar, \
              ThreadPoolExecutor(max_workers=WORKERS) as pool:
-            futures = [
-                pool.submit(encode_segment, job, seg_idx, tmp_dir, encoder, hardware, mbps)
-                for job in jobs
-                for seg_idx in range(job.num_segments)
-            ]
-            for future in as_completed(futures):
-                job, seg_idx, seg_path = future.result()
-                job.segments_done[seg_idx] = seg_path
-                pbar.update(1)
 
-                if len(job.segments_done) == job.num_segments:
-                    if finalize(job):
+            if overwrite:
+                # One file at a time, so at most one extra file's worth of disk
+                # space is ever in use — segments within a file still run in parallel.
+                for job in jobs:
+                    needed = estimate_output_bytes(job.duration, job.bit_rate, mbps, job.path)
+                    if disk_usage_pct(job.path.parent, needed) > DISK_WARN_PCT:
+                        tqdm.write(f"  SKIP (would exceed {DISK_WARN_PCT}% disk usage): {job.path.name}")
+                        pbar.update(job.num_segments)
+                        skipped += 1
+                        continue
+
+                    futures = [pool.submit(encode_segment, job, seg_idx, tmp_dir, encoder, hardware, mbps)
+                               for seg_idx in range(job.num_segments)]
+                    _drain(futures, pbar)
+                    if finalize(job, overwrite):
                         succeeded += 1
                     else:
                         failed += 1
+            else:
+                futures = [
+                    pool.submit(encode_segment, job, seg_idx, tmp_dir, encoder, hardware, mbps)
+                    for job in jobs
+                    for seg_idx in range(job.num_segments)
+                ]
+                for future in as_completed(futures):
+                    job, seg_idx, seg_path = future.result()
+                    job.segments_done[seg_idx] = seg_path
+                    pbar.update(1)
 
-    print(f"\nDone: {succeeded} denoised, {failed} failed.")
+                    if len(job.segments_done) == job.num_segments:
+                        if finalize(job, overwrite):
+                            succeeded += 1
+                        else:
+                            failed += 1
+
+    summary = f"\nDone: {succeeded} denoised, {failed} failed"
+    if skipped:
+        summary += f", {skipped} skipped (disk space)"
+    print(summary + '.')
     if failed:
         sys.exit(1)
 
@@ -271,6 +385,9 @@ def main() -> None:
     parser.add_argument('folder', type=Path, help='Folder to recursively scan for video files')
     parser.add_argument('--mbps', type=float, default=None,
                         help='Target video bitrate in Mbps (default: match each source file\'s own bitrate)')
+    parser.add_argument('--overwrite', action='store_true',
+                        help='Replace each source file in place instead of writing a '
+                             '_denoised copy alongside it')
     args = parser.parse_args()
 
     folder = args.folder.expanduser().resolve()
@@ -278,7 +395,7 @@ def main() -> None:
         print(f"Folder does not exist: {folder}")
         sys.exit(1)
 
-    run(folder, args.mbps)
+    run(folder, args.mbps, args.overwrite)
 
 
 if __name__ == '__main__':
