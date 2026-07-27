@@ -425,6 +425,10 @@ def run(folder: Path, mbps: float | None, overwrite: bool) -> None:
         print("\nNothing to do.")
         sys.exit(0)
 
+    # Smallest files first, so quick wins land early instead of queuing behind
+    # whatever huge file happened to sort alphabetically first.
+    jobs.sort(key=lambda j: j.path.stat().st_size)
+
     confirm_disk_space(folder, jobs, mbps, overwrite)
 
     encoder = pick_encoder()
