@@ -52,6 +52,6 @@ Thank you to my team for their support! I love being tagged on Instagram, and yo
 
 ## Miscellaneous media
 
-Non-performance media (venue, prizegiving, etc) can be viewed at <a href="https://photosby.loganwu.co.nz/albums/?album=000_miscellaneous_inversion_aerials" target="_blank"><b>here</b></a>.
+Non-performance media (venue, prizegiving, etc) can be viewed <a href="https://photosby.loganwu.co.nz/albums/?album=000_miscellaneous_inversion_aerials" target="_blank"><b>here</b></a>.
 
 You can download these <a href="https://drive.google.com/drive/folders/1gbnV4dBjkGjOE4al-IAKOuO0Dg7Ulj4m?usp=drive_link" target="_blank"><b>here</b></a>. If you pass these on (e.g. to your studio), please let them know to tag me on Instagram for attribution.
