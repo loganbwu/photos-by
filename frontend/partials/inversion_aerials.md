@@ -4,7 +4,7 @@ Thank you for performing at Inversion! This page contains details on how to acce
 
 ## Previews
 
-Find your ID below and click the thumbnail to view your previews.
+Find your ID below and click the thumbnail to view your previews. Then continue below for purchase options.
 
 <div id="album-access" data-album="inversion_aerials_thumbnails" data-link-mode="album" data-images-per-row="5"></div>
 <p id="error-message" style="color: firebrick; display: none;"></p>
@@ -13,14 +13,17 @@ Find your ID below and click the thumbnail to view your previews.
 
 ## How to order performance media
 
-There are four purchase options:
+There are five purchase options:
 
 | Option | Price |
 |--------|-------|
-| Per photo (if ordering individually) | $15 |
-| Video edit (on demand) | $35 |
+| Per photo (if ordering individually) | $10 |
+| Video edit | $35 |
 | All photos | $75 |
 | All photos + video edit | $95 |
+| All photos + video edits (2+ acts) | $105 |
+
+The 2+ acts option is for performers who appeared in more than one act (doubles included) - that is, you get all media from subsequent acts for an additional $10.
 
 Videos are edited upon payment. Video edits include cuts between two cameras and sound mixed from original music and the audience. Original media are stored for at least 6 months after the event so you can always change your order.
 
@@ -49,4 +52,6 @@ Thank you to my team for their support! I love being tagged on Instagram, and yo
 
 ## Miscellaneous media
 
-Non-performance media (venue, prizegiving, etc) are available <a href="https://photosby.loganwu.co.nz/albums/?album=00_miscellaneous_inversion_aerials" target="_blank"><b>here</b></a>.
+Non-performance media (venue, prizegiving, etc) can be viewed at <a href="https://photosby.loganwu.co.nz/albums/?album=00_miscellaneous_inversion_aerials" target="_blank"><b>here</b></a>.
+
+You can download these <a href="https://drive.google.com/drive/folders/1gbnV4dBjkGjOE4al-IAKOuO0Dg7Ulj4m?usp=drive_link" target="_blank"><b>here</b></a>. If you pass these on (e.g. to your studio), please let them know to tag me on Instagram for attribution.
