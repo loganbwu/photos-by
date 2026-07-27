@@ -152,6 +152,7 @@ function renderGallery() {
             itemContainer.className = 'grid__item-container js-grid-item-container image-container';
             if (isLinkThumb) {
                 itemContainer.href = `../albums/?album=${encodeURIComponent(runNumber)}`;
+                itemContainer.classList.add('grid__item-container--link');
             }
 
             const currentImageAspectRatio = typeof imgData.aspectRatio === 'number' && !isNaN(imgData.aspectRatio) ? imgData.aspectRatio : 1;

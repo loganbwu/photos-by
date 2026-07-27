@@ -164,6 +164,16 @@ header nav a:hover {
     cursor: pointer;
 }
 
+.grid__item-container--link {
+    border: 2px solid transparent;
+    transition: border-color 100ms ease-in-out;
+}
+
+.grid__item-container--link:hover,
+.grid__item-container--link:focus-visible {
+    border-color: #2196f3;
+}
+
 .grid__item-image {
   width: 100%;
   height: auto;
