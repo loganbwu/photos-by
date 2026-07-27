@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessageElement = document.getElementById('error-message');
     const albumAccessSection = document.getElementById('album-access');
     const galleryContainer = document.getElementById('image-gallery-container');
+    const albumTitleElement = document.getElementById('album-title');
 
     const backendUrl = 'https://australia-southeast1-photos-by-463514.cloudfunctions.net/private-gallery-backend';
 
@@ -81,6 +82,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             albumAccessSection.style.display = 'none';
             galleryContainer.style.display = '';
+
+            if (albumTitleElement) {
+                albumTitleElement.textContent = albumName.replace(/_/g, ' ');
+                albumTitleElement.style.display = '';
+            }
 
             // The GCS manifest is either a plain array of filenames (old format)
             // or { images: [...], sequences: [...] } (new format). Normalise so
