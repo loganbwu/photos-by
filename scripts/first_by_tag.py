@@ -1,22 +1,41 @@
 #!/usr/bin/env python3
 """Copy the earliest-captured photo for each IPTC keyword tag into a subfolder.
 
-For every image in <folder>, reads its IPTC keywords (same convention as
-sort_by_tag.py) and EXIF capture date. For each distinct keyword found across
-all images, copies the earliest-captured image bearing that keyword into the
-output folder, named after the keyword (e.g. keyword "40" -> "40.jpg").
+For every image under <folder> (searched recursively), reads its IPTC
+keywords (same convention as sort_by_tag.py) and EXIF capture date. For each
+distinct keyword found across all images, writes the earliest-captured image
+bearing that keyword into the output folder, named after the keyword (e.g.
+keyword "40" -> "40.jpg"). The output folder itself is flat, regardless of
+how deep the matching source images were nested. Thumbnails are downsized to
+roughly TARGET_MEGAPIXELS and saved as JPEG at JPEG_QUALITY, regardless of
+the source format.
 
 Usage: python3 first_by_tag.py <folder> [output_folder]
 Default output_folder: <folder>/thumbnails
 """
 
-import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
 
+from PIL import Image, ImageOps
+
 from sort_by_tag import IMAGE_EXTS, get_tagged_keywords
 from timelapse import get_capture_time
+
+TARGET_MEGAPIXELS = 300_000
+JPEG_QUALITY = 75
+
+
+def save_thumbnail(src: Path, dest: Path) -> None:
+    with Image.open(src) as img:
+        img = ImageOps.exif_transpose(img)
+        pixels = img.width * img.height
+        if pixels > TARGET_MEGAPIXELS:
+            scale = (TARGET_MEGAPIXELS / pixels) ** 0.5
+            img = img.resize((max(1, int(img.width * scale)), max(1, int(img.height * scale))),
+                              Image.LANCZOS)
+        img.convert('RGB').save(dest, 'JPEG', quality=JPEG_QUALITY)
 
 
 def main():
@@ -32,8 +51,10 @@ def main():
     output_folder = (Path(sys.argv[2]).expanduser().resolve()
                       if len(sys.argv) > 2 else folder / "thumbnails")
 
-    files = sorted(p for p in folder.iterdir() if p.suffix.lower() in IMAGE_EXTS)
-    print(f"Found {len(files)} image(s) in {folder}\n")
+    files = sorted(p for p in folder.rglob('*')
+                   if p.is_file() and p.suffix.lower() in IMAGE_EXTS
+                   and output_folder != p and output_folder not in p.parents)
+    print(f"Found {len(files)} image(s) under {folder}\n")
 
     earliest: dict[str, tuple[datetime, Path]] = {}
     untagged = no_timestamp = 0
@@ -64,8 +85,8 @@ def main():
     output_folder.mkdir(parents=True, exist_ok=True)
     for tag in sorted(earliest):
         capture_time, photo = earliest[tag]
-        dest = output_folder / f"{tag}{photo.suffix.lower()}"
-        shutil.copy2(photo, dest)
+        dest = output_folder / f"{tag}.jpg"
+        save_thumbnail(photo, dest)
         print(f"  {tag:>6}  <-  {photo.name}  ({capture_time})  ->  {dest.name}")
 
     print(f"\nDone: {len(earliest)} thumbnail(s) written to {output_folder}")
