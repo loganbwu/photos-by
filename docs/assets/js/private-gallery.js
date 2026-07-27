@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
             galleryContainer.style.display = '';
 
             if (albumTitleElement) {
-                albumTitleElement.textContent = albumName.replace(/_/g, ' ');
+                albumTitleElement.textContent = albumName;
                 albumTitleElement.style.display = '';
             }
 

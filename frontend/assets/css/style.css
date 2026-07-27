@@ -93,6 +93,10 @@ h2 {
   padding-top: 1rem;
 }
 
+#album-title {
+  text-transform: none;
+}
+
 header nav a {
     color: #aaa;
     text-decoration: none;
