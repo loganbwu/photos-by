@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Move exported Lightroom photos into subfolders by tag.
+r"""Move exported Lightroom photos into subfolders by tag.
 
-Tags matching ^\d{2}_ are treated as folder names. Photos with exactly one
-such tag are moved; photos with zero or more than one are skipped.
+Tags matching ^\d{2,}_ (two or more digits, e.g. 01_ or 001_) are treated as
+folder names. Photos with exactly one such tag are moved; photos with zero
+or more than one are skipped.
 
 Usage: python3 sort_by_tag.py <folder>
 """
@@ -14,7 +15,7 @@ from pathlib import Path
 from PIL import Image
 from PIL import IptcImagePlugin
 
-TAG_PATTERN = re.compile(r'^\d{2}_')
+TAG_PATTERN = re.compile(r'^\d{2,}_')
 IMAGE_EXTS = {'.jpg', '.jpeg', '.tif', '.tiff'}
 
 
