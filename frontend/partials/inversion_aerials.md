@@ -19,9 +19,9 @@ There are five purchase options:
 |--------|-------|
 | Per photo (if ordering individually) | $10 |
 | Video edit | $35 |
-| All photos | $75 |
-| All photos + video edit | $95 |
-| All photos + video edits (2+ acts) | $105 |
+| All photos | $70 |
+| All photos + video edit | $90 |
+| All photos + video edits (2+ acts) | $100 |
 
 The 2+ acts option is for performers who appeared in more than one act (doubles included) - that is, you get all media from subsequent acts for an additional $10.
 
