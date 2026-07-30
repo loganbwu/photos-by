@@ -162,7 +162,7 @@ cd backend && rye run stitch-gopro /path/to/gopro/folder [output_folder]
 
 ### Denoising Video Footage
 
-`scripts/denoise_videos.py` recursively finds every video in a folder and denoises it with ffmpeg's `vaguedenoiser` filter (moderate settings). Large files are chunked and encoded in parallel, with a single progress bar (chunks completed + ETA) across the whole batch.
+`scripts/denoise_videos.py` recursively finds every video in a folder and denoises it with ffmpeg's `vaguedenoiser` filter (moderate settings). Each video is encoded in a single ffmpeg pass — never split into chunks, since chunking a file and encoding its pieces in parallel was producing brief audio glitches at chunk boundaries. Parallelism instead comes from encoding multiple files at once (default mode only — see `--overwrite` below). An overall progress bar (files completed + ETA) tracks the whole batch, plus one progress bar per file currently being encoded.
 
 ```bash
 cd backend && rye run denoise-videos /path/to/folder [--mbps N] [--overwrite]

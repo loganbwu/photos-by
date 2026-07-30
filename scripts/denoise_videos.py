@@ -9,11 +9,20 @@ swaps it in once validated — but only one file's worth of extra space is
 ever in use at a time, and files are processed one at a time rather than in
 parallel, instead of the whole batch's worth of extra space at once).
 
-Long videos are split into chunks and encoded in parallel for speed (within
-a file, and — in default mode only — across files too), then reassembled.
-A single progress bar tracks chunks completed across the whole batch, with ETA
-— updated continuously from ffmpeg's own progress stream as each chunk encodes,
-not just when a chunk finishes, so it won't look stalled on heavy footage.
+Each video is encoded in a single ffmpeg pass — never split into chunks.
+An earlier version chunked long videos and encoded the chunks of a single
+file in parallel, then reassembled them; that was producing ~1/3 second
+audio glitches at some chunk boundaries, so chunking was removed entirely
+rather than just serialized, to rule out any splice-related cause along
+with the concurrency itself. Parallelism instead comes from encoding
+multiple files at once (in default mode only; --overwrite still processes
+one file at a time to bound extra disk usage).
+
+An overall progress bar tracks files completed across the whole batch, with
+ETA, plus one progress bar per file currently being encoded (in default mode).
+All bars are updated continuously from ffmpeg's own progress stream as each
+file encodes, not just when it finishes, so they won't look stalled on heavy
+footage.
 
 If the run looks likely to push disk usage past 90%, you'll be warned and
 asked to confirm, with a suggestion to use --overwrite if you aren't already.
@@ -34,7 +43,7 @@ import tempfile
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from tqdm import tqdm
@@ -42,14 +51,13 @@ from tqdm import tqdm
 VIDEO_EXTS = {'.mp4', '.mov', '.m4v', '.avi', '.mkv', '.mts', '.m2ts', '.wmv', '.flv', '.webm'}
 CONTAINER_PASSTHROUGH_EXTS = {'.mp4', '.mov', '.m4v', '.mts', '.m2ts'}  # can hold HEVC as-is
 
-SEG_LEN = 300  # seconds per chunk for large files
-WORKERS = max(1, (os.cpu_count() or 2) - 1)  # leave one core free for the rest of the machine
+WORKERS = max(1, (os.cpu_count() or 2) - 1)  # max files encoded concurrently; leave one core free
 DISK_WARN_PCT = 90
 
 # The VideoToolbox media-encode engine only supports a couple of concurrent
 # hardware HEVC sessions (far fewer than the CPU core count, and it varies by
 # chip) — asking for more doesn't queue, it fails outright with "Could not open
-# encoder before EOF". Cap concurrent hardware-encode segments well below
+# encoder before EOF". Cap concurrent hardware-encode sessions well below
 # WORKERS regardless of how many cores are free.
 HARDWARE_ENCODE_CONCURRENCY = min(WORKERS, 2)
 HARDWARE_ENCODER_BUSY_MARKERS = ('Could not open encoder before EOF',)
@@ -84,8 +92,6 @@ class FileJob:
     bit_rate: int | None
     pix_fmt: str | None
     timecode: str | None
-    num_segments: int
-    segments_done: dict[int, Path | None] = field(default_factory=dict)
 
 
 def _probe(path: Path, *entries: str, select_streams: str | None = None) -> str:
@@ -212,7 +218,6 @@ def build_jobs(files: list[Path], overwrite: bool) -> list[FileJob]:
             print(f"  SKIP (unreadable): {video.name}")
             continue
 
-        num_segments = 1 if duration <= SEG_LEN * 2 else -(-int(duration) // SEG_LEN)
         jobs.append(FileJob(
             index=i,
             path=video,
@@ -222,7 +227,6 @@ def build_jobs(files: list[Path], overwrite: bool) -> list[FileJob]:
             bit_rate=get_bit_rate(video),
             pix_fmt=get_pix_fmt(video),
             timecode=get_timecode(video),
-            num_segments=num_segments,
         ))
     return jobs
 
@@ -257,14 +261,14 @@ def confirm_disk_space(folder: Path, jobs: list[FileJob], mbps: float | None, ov
 _hardware_encode_slots = threading.Semaphore(HARDWARE_ENCODE_CONCURRENCY)
 
 
-def _run_with_progress(cmd: list[str], duration_hint: float, pbar: tqdm,
+def _run_with_progress(cmd: list[str], duration_hint: float, pbars: list[tqdm],
                         lock: threading.Lock) -> tuple[int, str, float]:
-    """Run ffmpeg, nudging pbar continuously (by fraction of one segment) as -progress
-    reports how far into duration_hint seconds of output it's gotten — rather than only
-    once the whole segment finishes, which can otherwise leave the bar looking stalled
-    for a long time on heavy footage. Returns (returncode, stderr, fraction of pbar
-    credit already given) — the caller tops up the remaining fraction itself, once,
-    after any retries, so a retried segment doesn't get double-counted.
+    """Run ffmpeg, nudging pbars continuously (by fraction of the file's duration) as
+    -progress reports how far into duration_hint seconds of output it's gotten — rather
+    than only once the whole file finishes, which can otherwise leave the bars looking
+    stalled for a long time on heavy footage. Returns (returncode, stderr, fraction of
+    pbar credit already given) — the caller tops up the remaining fraction itself, once,
+    after any retries, so a retried attempt doesn't get double-counted.
     """
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
@@ -285,7 +289,8 @@ def _run_with_progress(cmd: list[str], duration_hint: float, pbar: tqdm,
         frac = min(int(raw) / 1_000_000 / duration_hint, 1.0) if duration_hint > 0 else 1.0
         if frac > last_frac:
             with lock:
-                pbar.update(frac - last_frac)
+                for pbar in pbars:
+                    pbar.update(frac - last_frac)
             last_frac = frac
 
     proc.wait()
@@ -293,16 +298,13 @@ def _run_with_progress(cmd: list[str], duration_hint: float, pbar: tqdm,
     return proc.returncode, ''.join(stderr_chunks), last_frac
 
 
-def encode_segment(job: FileJob, seg_idx: int, tmp_dir: Path, encoder: list[str],
-                    hardware: bool, mbps: float | None, pbar: tqdm,
-                    lock: threading.Lock) -> tuple[FileJob, int, Path | None]:
+def encode_file(job: FileJob, tmp_dir: Path, encoder: list[str], hardware: bool,
+                 mbps: float | None, pbars: list[tqdm], lock: threading.Lock) -> Path | None:
     fmt, profile = pixel_args(job.pix_fmt, hardware)
     vf = f"{DENOISE_FILTER},{fmt}" if fmt else DENOISE_FILTER
 
-    whole = job.num_segments == 1
-    tmp_out = tmp_dir / f"{job.index:04d}_{seg_idx:04d}.mp4"
+    tmp_out = tmp_dir / f"{job.index:04d}.mp4"
 
-    seg_duration = job.duration
     # Hardware (VideoToolbox) encode sessions are highly sensitive to the calling
     # process's scheduling priority: macOS treats the media-encode engine as a
     # foreground-only resource and all but freezes a backgrounded/niced client's
@@ -311,16 +313,9 @@ def encode_segment(job: FileJob, seg_idx: int, tmp_dir: Path, encoder: list[str]
     # so only nice/background that path.
     prefix = [] if hardware else BACKGROUND_PREFIX
     cmd = [*prefix, 'ffmpeg', '-y', '-nostdin', '-loglevel', 'error',
-           '-progress', 'pipe:1', '-nostats']
-    if not whole:
-        cmd += ['-ss', str(seg_idx * SEG_LEN)]
-    cmd += ['-i', str(job.path)]
-    if not whole:
-        remaining = job.duration - seg_idx * SEG_LEN
-        seg_duration = min(SEG_LEN, remaining) + (2 if remaining < SEG_LEN else 0)
-        cmd += ['-t', str(seg_duration)]
-    cmd += ['-vf', vf, *encoder, *profile, *bitrate_args(mbps, job.bit_rate)]
-    if whole and job.timecode:
+           '-progress', 'pipe:1', '-nostats', '-i', str(job.path),
+           '-vf', vf, *encoder, *profile, *bitrate_args(mbps, job.bit_rate)]
+    if job.timecode:
         cmd += ['-timecode', job.timecode]
     cmd += ['-c:a', 'copy', str(tmp_out)]
 
@@ -329,66 +324,41 @@ def encode_segment(job: FileJob, seg_idx: int, tmp_dir: Path, encoder: list[str]
     for attempt in range(1, max_attempts + 1):
         if hardware:
             with _hardware_encode_slots:
-                returncode, stderr, last_frac = _run_with_progress(cmd, seg_duration, pbar, lock)
+                returncode, stderr, last_frac = _run_with_progress(cmd, job.duration, pbars, lock)
         else:
-            returncode, stderr, last_frac = _run_with_progress(cmd, seg_duration, pbar, lock)
+            returncode, stderr, last_frac = _run_with_progress(cmd, job.duration, pbars, lock)
 
         if returncode == 0 and is_valid_video(tmp_out):
             break
         # The hardware encoder only supports a couple of concurrent sessions
         # system-wide (shared with any other app using it, not just this script),
         # so "no free session" can still happen even under our own concurrency
-        # cap — retry with backoff rather than failing the segment outright.
+        # cap — retry with backoff rather than failing the file outright.
         busy = hardware and any(marker in stderr for marker in HARDWARE_ENCODER_BUSY_MARKERS)
         if busy and attempt < max_attempts:
-            tqdm.write(f"  Hardware encoder busy, retrying {job.path.name} "
-                       f"(segment {seg_idx}), attempt {attempt + 1}/{max_attempts}...")
+            tqdm.write(f"  Hardware encoder busy, retrying {job.path.name}, "
+                       f"attempt {attempt + 1}/{max_attempts}...")
             time.sleep(attempt * 3)
             continue
         break
 
     with lock:
-        pbar.update(1.0 - last_frac)
+        for pbar in pbars:
+            pbar.update(1.0 - last_frac)
 
     if returncode != 0 or not is_valid_video(tmp_out):
-        tqdm.write(f"  ERROR encoding {job.path.name} (segment {seg_idx}):\n{stderr.strip()[-500:]}")
+        tqdm.write(f"  ERROR encoding {job.path.name}:\n{stderr.strip()[-500:]}")
         tmp_out.unlink(missing_ok=True)
-        return job, seg_idx, None
-    return job, seg_idx, tmp_out
+        return None
+    return tmp_out
 
 
-def finalize(job: FileJob, overwrite: bool, tmp_dir: Path) -> bool:
-    segments = [job.segments_done[i] for i in range(job.num_segments)]
-    if any(s is None for s in segments):
-        tqdm.write(f"  FAILED: {job.path.name} (one or more segments failed to encode)")
-        for s in segments:
-            if s is not None:
-                s.unlink(missing_ok=True)
+def finalize(job: FileJob, tmp_out: Path | None, overwrite: bool) -> bool:
+    if tmp_out is None:
+        tqdm.write(f"  FAILED: {job.path.name}")
         return False
 
-    if job.num_segments == 1:
-        shutil.move(str(segments[0]), str(job.output))
-    else:
-        list_file = tmp_dir / f"{job.index:04d}_concat.txt"
-        try:
-            with list_file.open('w') as f:
-                for seg in segments:
-                    f.write(f"file '{seg.resolve()}'\n")
-            cmd = [*BACKGROUND_PREFIX, 'ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat',
-                   '-safe', '0', '-i', str(list_file)]
-            if job.timecode:
-                cmd += ['-timecode', job.timecode]
-            cmd += ['-c', 'copy', str(job.output)]
-            result = subprocess.run(cmd, capture_output=True, text=True)
-        finally:
-            list_file.unlink(missing_ok=True)
-            for seg in segments:
-                seg.unlink(missing_ok=True)
-
-        if result.returncode != 0 or not is_valid_video(job.output):
-            tqdm.write(f"  FAILED: {job.path.name} (concat failed)\n{result.stderr.strip()[-500:]}")
-            job.output.unlink(missing_ok=True)
-            return False
+    shutil.move(str(tmp_out), str(job.output))
 
     if overwrite:
         # Atomic rename on the same filesystem — overwrites final_path if it already
@@ -402,10 +372,43 @@ def finalize(job: FileJob, overwrite: bool, tmp_dir: Path) -> bool:
     return True
 
 
-def _drain(futures) -> None:
-    for future in as_completed(futures):
-        job, seg_idx, seg_path = future.result()
-        job.segments_done[seg_idx] = seg_path
+class FileBarPool:
+    """A fixed set of per-file progress bars, one per concurrently-processing file slot.
+
+    Worker threads are long-lived (a ThreadPoolExecutor reuses them across jobs), so
+    each thread claims one slot the first time it processes a file and keeps it for
+    its lifetime — reset() and set_description() just repoint that same bar at
+    whatever file the thread picks up next.
+    """
+
+    def __init__(self, n: int, base_position: int):
+        bar_format = "  {desc}: {bar}| {percentage:3.0f}% [{elapsed}<{remaining}]"
+        self._bars = [tqdm(total=1, position=base_position + i, leave=False, bar_format=bar_format)
+                      for i in range(n)]
+        self._free = list(range(n))
+        self._lock = threading.Lock()
+        self._local = threading.local()
+
+    def acquire(self, job: 'FileJob') -> tqdm:
+        if not hasattr(self._local, 'slot'):
+            with self._lock:
+                self._local.slot = self._free.pop()
+        bar = self._bars[self._local.slot]
+        bar.reset(total=1)
+        bar.set_description(job.path.name[:40])
+        return bar
+
+    def close(self) -> None:
+        for bar in self._bars:
+            bar.close()
+
+
+def process_file(job: FileJob, tmp_dir: Path, encoder: list[str], hardware: bool, mbps: float | None,
+                  overall_pbar: tqdm, file_bars: FileBarPool, lock: threading.Lock,
+                  overwrite: bool) -> bool:
+    file_pbar = file_bars.acquire(job)
+    tmp_out = encode_file(job, tmp_dir, encoder, hardware, mbps, [overall_pbar, file_pbar], lock)
+    return finalize(job, tmp_out, overwrite)
 
 
 def run(folder: Path, mbps: float | None, overwrite: bool) -> None:
@@ -433,51 +436,51 @@ def run(folder: Path, mbps: float | None, overwrite: bool) -> None:
 
     encoder = pick_encoder()
     hardware = encoder[1] == 'hevc_videotoolbox'
-    total_segments = sum(j.num_segments for j in jobs)
-    print(f"{len(jobs)} file(s) to denoise, {total_segments} segment(s) total\n")
+    print(f"{len(jobs)} file(s) to denoise\n")
 
     succeeded = failed = skipped = 0
     lock = threading.Lock()
     with tempfile.TemporaryDirectory(prefix='.denoise_videos_', dir=folder) as tmp_dir_str:
         tmp_dir = Path(tmp_dir_str)
         bar_format = "{l_bar}{bar}| {n:.1f}/{total} [{elapsed}<{remaining}, {rate_fmt}{postfix}]"
-        with tqdm(total=total_segments, desc="Denoising", unit="seg", bar_format=bar_format) as pbar, \
-             ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        with tqdm(total=len(jobs), desc="Total", unit="file", position=0, bar_format=bar_format) as pbar:
 
             if overwrite:
                 # One file at a time, so at most one extra file's worth of disk
-                # space is ever in use — segments within a file still run in parallel.
-                for job in jobs:
-                    needed = estimate_output_bytes(job.duration, job.bit_rate, mbps, job.path)
-                    if disk_usage_pct(job.path.parent, needed) > DISK_WARN_PCT:
-                        tqdm.write(f"  SKIP (would exceed {DISK_WARN_PCT}% disk usage): {job.path.name}")
-                        pbar.update(job.num_segments)
-                        skipped += 1
-                        continue
+                # space is ever in use. A single file-progress bar is enough since
+                # only one file is ever active.
+                file_bars = FileBarPool(1, base_position=1)
+                try:
+                    for job in jobs:
+                        needed = estimate_output_bytes(job.duration, job.bit_rate, mbps, job.path)
+                        if disk_usage_pct(job.path.parent, needed) > DISK_WARN_PCT:
+                            tqdm.write(f"  SKIP (would exceed {DISK_WARN_PCT}% disk usage): {job.path.name}")
+                            pbar.update(1)
+                            skipped += 1
+                            continue
 
-                    futures = [pool.submit(encode_segment, job, seg_idx, tmp_dir, encoder, hardware,
-                                            mbps, pbar, lock)
-                               for seg_idx in range(job.num_segments)]
-                    _drain(futures)
-                    if finalize(job, overwrite, tmp_dir):
-                        succeeded += 1
-                    else:
-                        failed += 1
-            else:
-                futures = [
-                    pool.submit(encode_segment, job, seg_idx, tmp_dir, encoder, hardware, mbps, pbar, lock)
-                    for job in jobs
-                    for seg_idx in range(job.num_segments)
-                ]
-                for future in as_completed(futures):
-                    job, seg_idx, seg_path = future.result()
-                    job.segments_done[seg_idx] = seg_path
-
-                    if len(job.segments_done) == job.num_segments:
-                        if finalize(job, overwrite, tmp_dir):
+                        if process_file(job, tmp_dir, encoder, hardware, mbps, pbar, file_bars, lock, overwrite):
                             succeeded += 1
                         else:
                             failed += 1
+                finally:
+                    file_bars.close()
+            else:
+                # Files run in parallel, one progress bar each.
+                n_slots = min(WORKERS, len(jobs))
+                file_bars = FileBarPool(n_slots, base_position=1)
+                try:
+                    with ThreadPoolExecutor(max_workers=n_slots) as pool:
+                        futures = [pool.submit(process_file, job, tmp_dir, encoder, hardware, mbps,
+                                                pbar, file_bars, lock, overwrite)
+                                   for job in jobs]
+                        for future in as_completed(futures):
+                            if future.result():
+                                succeeded += 1
+                            else:
+                                failed += 1
+                finally:
+                    file_bars.close()
 
     summary = f"\nDone: {succeeded} denoised, {failed} failed"
     if skipped:
