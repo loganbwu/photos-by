@@ -2,8 +2,11 @@
 """Denoise every video in a folder (recursively) using ffmpeg's vaguedenoiser filter.
 
 By default each video is left untouched — output is written alongside it as
-<name>_denoised<ext> (skipped if that file already exists). With --overwrite,
-each source file is replaced in place instead (there's no way to transcode a
+<name>_denoised<ext> (skipped if that file already exists). Pass an output
+folder as a second argument to instead write into that folder under each
+file's original name (no _denoised suffix), mirroring the input's subfolder
+structure. With --overwrite (mutually exclusive with an output folder), each
+source file is replaced in place instead (there's no way to transcode a
 video into its own bytes, so this still encodes to a temp file first and
 swaps it in once validated — but only one file's worth of extra space is
 ever in use at a time, and files are processed one at a time rather than in
@@ -27,7 +30,7 @@ footage.
 If the run looks likely to push disk usage past 90%, you'll be warned and
 asked to confirm, with a suggestion to use --overwrite if you aren't already.
 
-Usage: python3 denoise_videos.py <folder> [--mbps MBPS] [--overwrite]
+Usage: python3 denoise_videos.py <folder> [output_folder] [--mbps MBPS] [--overwrite]
 
 Requires ffmpeg on PATH. Uses hevc_videotoolbox hardware encoding when
 available (Apple Silicon), falling back to libx265.
@@ -177,7 +180,7 @@ def cleanup_stale_temp_files(folder: Path) -> None:
             p.unlink(missing_ok=True)
 
 
-def final_path_for(video: Path, overwrite: bool) -> Path:
+def final_path_for(video: Path, input_folder: Path, output_folder: Path | None, overwrite: bool) -> Path:
     if overwrite:
         # Same container extensions can hold HEVC as-is and get replaced under
         # their original name; anything else (e.g. .avi) gets swapped to .mp4 —
@@ -186,6 +189,11 @@ def final_path_for(video: Path, overwrite: bool) -> Path:
             return video
         return video.with_suffix('.mp4')
     ext = video.suffix if video.suffix.lower() in CONTAINER_PASSTHROUGH_EXTS else '.mp4'
+    if output_folder is not None:
+        # Written to a separate folder, mirroring the input's subfolder structure,
+        # so no name collision with the source — no need for a _denoised suffix.
+        rel = video.relative_to(input_folder).with_suffix(ext)
+        return output_folder / rel
     return video.parent / f"{video.stem}_denoised{ext}"
 
 
@@ -205,10 +213,11 @@ def estimate_output_bytes(duration: float, bit_rate: int | None, mbps: float | N
     return path.stat().st_size  # best-effort fallback: assume similar size to the source
 
 
-def build_jobs(files: list[Path], overwrite: bool) -> list[FileJob]:
+def build_jobs(files: list[Path], input_folder: Path, output_folder: Path | None,
+               overwrite: bool) -> list[FileJob]:
     jobs = []
     for i, video in enumerate(files):
-        final_path = final_path_for(video, overwrite)
+        final_path = final_path_for(video, input_folder, output_folder, overwrite)
         if not overwrite and final_path.exists():
             print(f"  SKIP (already denoised): {video.name}")
             continue
@@ -236,13 +245,13 @@ def disk_usage_pct(folder: Path, extra_bytes: int) -> float:
     return (usage.used + extra_bytes) / usage.total * 100
 
 
-def confirm_disk_space(folder: Path, jobs: list[FileJob], mbps: float | None, overwrite: bool) -> None:
+def confirm_disk_space(target_folder: Path, jobs: list[FileJob], mbps: float | None, overwrite: bool) -> None:
     estimates = [estimate_output_bytes(j.duration, j.bit_rate, mbps, j.path) for j in jobs]
     # Overwrite mode processes one file at a time and frees each original before
     # starting the next, so the peak extra usage is one file's worth, not the batch's.
     peak_extra = max(estimates, default=0) if overwrite else sum(estimates)
 
-    projected = disk_usage_pct(folder, peak_extra)
+    projected = disk_usage_pct(target_folder, peak_extra)
     if projected <= DISK_WARN_PCT:
         return
 
@@ -406,24 +415,28 @@ class FileBarPool:
 def process_file(job: FileJob, tmp_dir: Path, encoder: list[str], hardware: bool, mbps: float | None,
                   overall_pbar: tqdm, file_bars: FileBarPool, lock: threading.Lock,
                   overwrite: bool) -> bool:
+    job.output.parent.mkdir(parents=True, exist_ok=True)
     file_pbar = file_bars.acquire(job)
     tmp_out = encode_file(job, tmp_dir, encoder, hardware, mbps, [overall_pbar, file_pbar], lock)
     return finalize(job, tmp_out, overwrite)
 
 
-def run(folder: Path, mbps: float | None, overwrite: bool) -> None:
+def run(folder: Path, output_folder: Path | None, mbps: float | None, overwrite: bool) -> None:
     if not shutil.which('ffmpeg') or not shutil.which('ffprobe'):
         print("ffmpeg/ffprobe not found on PATH. Install with: brew install ffmpeg")
         sys.exit(1)
 
     cleanup_stale_temp_files(folder)
 
+    if output_folder is not None:
+        output_folder.mkdir(parents=True, exist_ok=True)
+
     files = discover_videos(folder)
     print(f"Found {len(files)} video file(s) in {folder}\n")
     if not files:
         sys.exit(0)
 
-    jobs = build_jobs(files, overwrite)
+    jobs = build_jobs(files, folder, output_folder, overwrite)
     if not jobs:
         print("\nNothing to do.")
         sys.exit(0)
@@ -432,7 +445,7 @@ def run(folder: Path, mbps: float | None, overwrite: bool) -> None:
     # whatever huge file happened to sort alphabetically first.
     jobs.sort(key=lambda j: j.path.stat().st_size)
 
-    confirm_disk_space(folder, jobs, mbps, overwrite)
+    confirm_disk_space(output_folder if output_folder is not None else folder, jobs, mbps, overwrite)
 
     encoder = pick_encoder()
     hardware = encoder[1] == 'hevc_videotoolbox'
@@ -494,19 +507,29 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('folder', type=Path, help='Folder to recursively scan for video files')
+    parser.add_argument('output', type=Path, nargs='?', default=None,
+                        help='Folder to write denoised videos into, mirroring the input\'s '
+                             'subfolder structure, under their original filenames (no '
+                             '_denoised suffix). Created if it doesn\'t exist. Default: write '
+                             '<name>_denoised<ext> alongside each source file instead.')
     parser.add_argument('--mbps', type=float, default=None,
                         help='Target video bitrate in Mbps (default: match each source file\'s own bitrate)')
     parser.add_argument('--overwrite', action='store_true',
                         help='Replace each source file in place instead of writing a '
-                             '_denoised copy alongside it')
+                             '_denoised copy alongside it. Cannot be combined with an output folder.')
     args = parser.parse_args()
+
+    if args.output is not None and args.overwrite:
+        parser.error("argument output: not allowed with argument --overwrite")
 
     folder = args.folder.expanduser().resolve()
     if not folder.exists():
         print(f"Folder does not exist: {folder}")
         sys.exit(1)
 
-    run(folder, args.mbps, args.overwrite)
+    output_folder = args.output.expanduser().resolve() if args.output is not None else None
+
+    run(folder, output_folder, args.mbps, args.overwrite)
 
 
 if __name__ == '__main__':
