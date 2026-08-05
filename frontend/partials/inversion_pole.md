@@ -29,7 +29,7 @@ There are five purchase options:
 | All photos + video edit | $90 |
 | All photos + video edits (2+ acts) | $100 |
 
-The 2+ acts option is for anyone who performed more than once - whether as a solo performer in multiple acts, as part of a doubles act*, or as part of the aerials division on July 25th. I know media gets super expensive, so this makes sure no one will pay more than $100 *total* for the entire Inversion comp.
+The 2+ acts option is for anyone who performed more than once. I know media gets expensive, so no one will pay more than $100 *total*.
 
 Examples:
 1. You performed once on July 25th and twice on August 1st. You already paid $90 for aerials, so your pole media will cost $10.
@@ -41,6 +41,8 @@ Payment can be made to:\
 Name: Logan Wu Business\
 BSB: 062-692\
 Account: 8299 8746
+
+Please include the album ID number(s) in the reference.
 
 Note: your bank may not recognise the account name exactly as written here - this is normal.
 
@@ -59,5 +61,3 @@ Thank you to my team for their support! I love being tagged on Instagram, and yo
 <a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a>\
 <a href="https://instagram.com/thigh_bruise" target="_blank">@thigh_bruise</a>\
 <a href="https://instagram.com/gillybeanbag" target="_blank">@gillybeanbag</a>
-
-*Does not apply to your doubles partner's solo act.
