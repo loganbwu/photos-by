@@ -31,6 +31,10 @@ There are five purchase options:
 
 The 2+ acts option is for anyone who performed more than once - whether as a solo performer in multiple acts, as part of a doubles act*, or as part of the aerials division on July 25th. I know media gets super expensive, so this makes sure no one will pay more than $100 *total* for the entire Inversion comp.
 
+Examples:
+1. You performed once on July 25th and twice on August 1st. You already paid $90 for aerials, so your pole media will cost $10.
+2. You and your doubles partner both also did solos. Your doubles partner only wants one photo. You can submit the form for $100 (solo x1 + doubles x1) and your partner can submit the form for $15 (photo x1).
+
 Videos are edited upon payment. Video edits include cuts between two cameras and sound mixed from original music and the audience. Original media are stored for at least 6 months after the event so you can always change your order.
 
 Payment can be made to:\
