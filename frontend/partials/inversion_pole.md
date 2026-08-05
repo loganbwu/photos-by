@@ -38,7 +38,7 @@ Examples:
 Videos are edited upon payment. Video edits include cuts between two cameras and sound mixed from original music and the audience. Original media are stored for at least 6 months after the event so you can always change your order.
 
 Payment can be made to:\
-Name: Logan Wu Business\
+Name: Logan Wu\
 BSB: 062-692\
 Account: 8299 8746
 
