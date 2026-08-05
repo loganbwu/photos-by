@@ -29,7 +29,7 @@ There are five purchase options:
 | All photos + video edit | $90 |
 | All photos + video edits (2+ acts) | $100 |
 
-The 2+ acts option is for anyone who performed more than once - whether as a solo performer in multiple acts, as part of a doubles act*, or as part of the aerials division on July 25th.
+The 2+ acts option is for anyone who performed more than once - whether as a solo performer in multiple acts, as part of a doubles act*, or as part of the aerials division on July 25th. I know media gets super expensive, so this makes sure no one will pay more than $100 *total* for the overall Inversion comp.
 
 Videos are edited upon payment. Video edits include cuts between two cameras and sound mixed from original music and the audience. Original media are stored for at least 6 months after the event so you can always change your order.
 
