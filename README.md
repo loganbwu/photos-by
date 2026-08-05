@@ -112,7 +112,7 @@ The frontend is deployed via GitHub Pages from the `docs/` directory of the `mai
 
 ## Backend (Private Gallery)
 
-The backend is a FastAPI application managed with [Rye](https://rye-up.com/) that provides secure access to private photo galleries stored in Google Cloud Storage (GCS).
+The backend is a Google Cloud Function (using `functions-framework`), managed with [uv](https://docs.astral.sh/uv/), that provides secure access to private photo galleries stored in Google Cloud Storage (GCS).
 
 ### How It Works
 
@@ -122,7 +122,7 @@ The backend is a FastAPI application managed with [Rye](https://rye-up.com/) tha
 ### Setup and Running Locally (Backend)
 
 **Prerequisites:**
-*   **Rye:** [Installation Guide](https://rye-up.com/guide/installation/)
+*   **uv:** [Installation Guide](https://docs.astral.sh/uv/getting-started/installation/)
 *   **Google Cloud SDK:** [Installation Guide](https://cloud.google.com/sdk/docs/install)
     *   After installing, initialize and authenticate:
         ```bash
@@ -137,11 +137,11 @@ The backend is a FastAPI application managed with [Rye](https://rye-up.com/) tha
 1.  **Navigate to the backend directory and install dependencies:**
     ```bash
     cd backend
-    rye sync
+    uv sync
     ```
 2.  **Run the development server:**
     ```bash
-    rye run start
+    uv run functions-framework --target=private_gallery_backend --port=8001
     ```
     The application will be accessible at `http://localhost:8001`.
 
@@ -150,7 +150,7 @@ The backend is a FastAPI application managed with [Rye](https://rye-up.com/) tha
 GoPro cameras split long recordings into ~4 GB chapter files. `scripts/stitch_gopro.py` detects which files belong to the same recording and concatenates them into single output files using ffmpeg stream copy (no re-encoding, lossless).
 
 ```bash
-cd backend && rye run stitch-gopro /path/to/gopro/folder [output_folder]
+cd backend && uv run python ../scripts/stitch_gopro.py /path/to/gopro/folder [output_folder]
 ```
 
 - Output folder defaults to `<folder>/stitched`
@@ -165,7 +165,7 @@ cd backend && rye run stitch-gopro /path/to/gopro/folder [output_folder]
 `scripts/denoise_videos.py` recursively finds every video in a folder and denoises it with ffmpeg's `vaguedenoiser` filter (moderate settings). Each video is encoded in a single ffmpeg pass — never split into chunks, since chunking a file and encoding its pieces in parallel was producing brief audio glitches at chunk boundaries. Parallelism instead comes from encoding multiple files at once (default mode only — see `--overwrite` below). An overall progress bar (files completed + ETA) tracks the whole batch, plus one progress bar per file currently being encoded.
 
 ```bash
-cd backend && rye run denoise-videos /path/to/folder [output_folder] [--mbps N] [--overwrite]
+cd backend && uv run python ../scripts/denoise_videos.py /path/to/folder [output_folder] [--mbps N] [--overwrite]
 ```
 
 - By default, writes a `<name>_denoised<ext>` copy alongside each source file (originals untouched)
@@ -182,7 +182,7 @@ cd backend && rye run denoise-videos /path/to/folder [output_folder] [--mbps N] 
 `scripts/compress_videos.py` recursively finds every video in a folder and re-encodes it with libx265 (CRF-based, 10-bit 4:2:0, `hvc1` tag) to shrink storage footprint while keeping the result readable by DaVinci Resolve/QuickTime/Final Cut. Audio is stream-copied (no re-encode, no A/V drift) and the source's timecode track, if any, is preserved so the clip still lines up on Resolve's timeline. An overall progress bar (files completed + ETA) tracks the whole batch, plus one progress bar per file currently being encoded.
 
 ```bash
-cd backend && rye run compress-videos /path/to/folder /path/to/output_folder [--crf N] [--preset NAME]
+cd backend && uv run python ../scripts/compress_videos.py /path/to/folder /path/to/output_folder [--crf N] [--preset NAME]
 ```
 
 - Both `input_folder` and `output_folder` are required — originals are never modified or deleted
@@ -200,7 +200,7 @@ cd backend && rye run compress-videos /path/to/folder /path/to/output_folder [--
 `scripts/make_slideshow.py` takes a folder of images and produces an MP4 where each photo holds until the next one, timed by EXIF capture date (`DateTimeOriginal`). The output can be dropped into a video editor alongside footage from the same event to sync shots to the timeline.
 
 ```bash
-cd backend && rye run make-slideshow /path/to/photos [output.mp4] [--tail SECONDS]
+cd backend && uv run python ../scripts/make_slideshow.py /path/to/photos [output.mp4] [--tail SECONDS]
 ```
 
 - **`--tail`** — hold duration for the final image (default: same as the last interval)
@@ -213,13 +213,13 @@ cd backend && rye run make-slideshow /path/to/photos [output.mp4] [--tail SECOND
 
 > **Pre-processing:** If you have a flat folder of Lightroom exports tagged with `NN_` keywords (e.g. `01_selects`, `02_edits`), `scripts/sort_by_tag.py` moves each image into a subfolder named after its tag. Photos with no matching tag or with multiple tags are skipped.
 > ```bash
-> cd backend && rye run sort-by-tag /path/to/lightroom/export
+> cd backend && uv run python ../scripts/sort_by_tag.py /path/to/lightroom/export
 > ```
 > Requires `Pillow` (already a backend dependency).
 
 > **Thumbnail per tag:** To pick one representative thumbnail per keyword tag (e.g. building a run-number preview gallery), `scripts/first_by_tag.py` reads every image's IPTC keywords and EXIF capture date, then copies the earliest-captured photo for each distinct keyword into an output folder, named after the keyword (e.g. keyword `40` -> `40.jpg`).
 > ```bash
-> cd backend && rye run first-by-tag /path/to/flat/export [output_folder]
+> cd backend && uv run python ../scripts/first_by_tag.py /path/to/flat/export [output_folder]
 > ```
 > Defaults to `<folder>/thumbnails` if `output_folder` is omitted.
 
@@ -227,7 +227,7 @@ cd backend && rye run make-slideshow /path/to/photos [output.mp4] [--tail SECOND
 2.  **Add Photos:** Copy the client's photos into the new folder.
 3.  **Sync to GCS:** From the `backend` directory, run the sync script:
     ```bash
-    rye run sync-gcs
+    uv run python ../scripts/sync_gcs.py
     ```
 
 **Nested folders for local organization:** Client folders can be nested arbitrarily deep purely for your own convenience (e.g. `2026_event/person01/`) -- the gallery password is always the leaf folder's own name (`person01`), not its full path. Since GCS gallery paths are flat, two leaf folders that resolve to the same name (even under different parents, or differing only in case) will cause the sync script to stop with an error rather than silently overwriting one gallery with another.
@@ -251,7 +251,7 @@ The backend is deployed to Google Cloud Functions (2nd Gen) using the `deploy.sh
 1.  **Run the deployment script from the `backend` directory:**
     ```bash
     cd backend
-    rye run deploy
+    uv run ../scripts/deploy.sh
     ```
 2.  **Update Frontend Config:** The script will output a **Trigger URL**. Copy this URL and update the `backendUrl` variable in `frontend/assets/js/private-gallery.js`.
 3.  **Re-build and deploy the frontend** to apply the changes.
