@@ -27,9 +27,9 @@ There are five purchase options:
 | Video edit | $35 |
 | All photos | $70 |
 | All photos + video edit | $90 |
-| All photos + video edits (2+ acts) | $100 |
+| All photos + video edits for multiple acts | $100 |
 
-The 2+ acts option is for anyone who performed more than once. I know media gets expensive, so no one will pay more than $100 *total*.
+The multiple acts option is for anyone who performed more than once. I know media gets expensive, so no one will pay more than $100 *total*.
 
 Examples:
 1. You performed once on July 25th and twice on August 1st. You already paid $90 for aerials, so your pole media will cost $10.
