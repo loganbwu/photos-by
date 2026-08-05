@@ -54,4 +54,4 @@ Thank you to my team for their support! I love being tagged on Instagram, and yo
 
 Non-performance media (venue, prizegiving, etc) can be viewed <a href="https://photosby.loganwu.co.nz/albums/?album=000_miscellaneous_inversion_pole" target="_blank"><b>here</b></a>.
 
-You can download these <a href="https://drive.google.com/drive/folders/1dz7jYt1GOpGp1Jq5jNVtBTTx6Ru4BB5A?usp=drive_link" target="_blank"><b>here</b></a>. If you pass these on (e.g. to your studio), please let them know to tag me on Instagram for attribution.
+I have uploaded these for you to download free of charge <a href="https://drive.google.com/drive/folders/1dz7jYt1GOpGp1Jq5jNVtBTTx6Ru4BB5A?usp=drive_link" target="_blank"><b>here</b></a>. If you pass these on (e.g. to your studio), please let them know to tag me on Instagram for attribution.

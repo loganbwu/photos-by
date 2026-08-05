@@ -152,6 +152,8 @@ function renderGallery() {
             itemContainer.className = 'grid__item-container js-grid-item-container image-container';
             if (isLinkThumb) {
                 itemContainer.href = `../albums/?album=${encodeURIComponent(runNumber)}`;
+                itemContainer.target = '_blank';
+                itemContainer.rel = 'noopener';
                 itemContainer.classList.add('grid__item-container--link');
             }
 
