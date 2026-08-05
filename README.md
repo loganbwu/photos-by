@@ -177,6 +177,24 @@ cd backend && rye run denoise-videos /path/to/folder [output_folder] [--mbps N] 
 
 ---
 
+### Compressing Video Footage for Archival
+
+`scripts/compress_videos.py` recursively finds every video in a folder and re-encodes it with libx265 (CRF-based, 10-bit 4:2:0, `hvc1` tag) to shrink storage footprint while keeping the result readable by DaVinci Resolve/QuickTime/Final Cut. Audio is stream-copied (no re-encode, no A/V drift) and the source's timecode track, if any, is preserved so the clip still lines up on Resolve's timeline. An overall progress bar (files completed + ETA) tracks the whole batch, plus one progress bar per file currently being encoded.
+
+```bash
+cd backend && rye run compress-videos /path/to/folder /path/to/output_folder [--crf N] [--preset NAME]
+```
+
+- Both `input_folder` and `output_folder` are required — originals are never modified or deleted
+- Output always mirrors the input's subfolder structure and is always written as `.mp4` (needed for the `hvc1` tag)
+- A file is skipped if its corresponding output already exists
+- **`--crf`** — x265 quality level, lower is higher quality and larger files (default: 20)
+- **`--preset`** — x265 speed/efficiency tradeoff (default: `slow`)
+- If the run looks likely to push disk usage past 90%, you'll be warned and prompted to confirm
+- Requires `ffmpeg` on PATH (`brew install ffmpeg`)
+
+---
+
 ### Creating a Slideshow for Event Sync
 
 `scripts/make_slideshow.py` takes a folder of images and produces an MP4 where each photo holds until the next one, timed by EXIF capture date (`DateTimeOriginal`). The output can be dropped into a video editor alongside footage from the same event to sync shots to the timeline.

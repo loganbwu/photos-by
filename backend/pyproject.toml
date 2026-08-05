@@ -26,6 +26,7 @@ make-slideshow = { cmd = "python ../scripts/make_slideshow.py" }
 timelapse = { cmd = "python ../scripts/timelapse.py" }
 stitch-gopro = { cmd = "python ../scripts/stitch_gopro.py" }
 denoise-videos = { cmd = "python ../scripts/denoise_videos.py" }
+compress-videos = { cmd = "python ../scripts/compress_videos.py" }
 deploy = { cmd = "../scripts/deploy.sh" }
 pip = { cmd = "pip" }
 
