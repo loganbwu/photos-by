@@ -29,7 +29,7 @@ There are five purchase options:
 | All photos + video edit | $90 |
 | All photos + video edits (2+ acts) | $100 |
 
-The 2+ acts option is for anyone who performed more than once - whether as a solo performer in multiple acts, as part of a doubles act (this does not apply to the doubles partner's individual solo), or as part of the aerials division on July 25th - that is, you get all media from subsequent acts for an additional $10.
+The 2+ acts option is for anyone who performed more than once - whether as a solo performer in multiple acts, as part of a doubles act*, or as part of the aerials division on July 25th.
 
 Videos are edited upon payment. Video edits include cuts between two cameras and sound mixed from original music and the audience. Original media are stored for at least 6 months after the event so you can always change your order.
 
@@ -55,3 +55,5 @@ Thank you to my team for their support! I love being tagged on Instagram, and yo
 <a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a>\
 <a href="https://instagram.com/thigh_bruise" target="_blank">@thigh_bruise</a>\
 <a href="https://instagram.com/gillybeanbag" target="_blank">@gillybeanbag</a>
+
+*Does not apply to your doubles partner's solo act.
