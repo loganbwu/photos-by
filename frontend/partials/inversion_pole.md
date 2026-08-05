@@ -6,7 +6,7 @@ Thank you for performing at Inversion! This page contains details on how to acce
 
 Non-performance media (venue, prizegiving, etc) can be viewed <a href="https://photosby.loganwu.co.nz/albums/?album=000_miscellaneous_inversion_pole" target="_blank"><b>here</b></a>.
 
-I have uploaded these for you to download free of charge <a href="https://drive.google.com/drive/folders/1dz7jYt1GOpGp1Jq5jNVtBTTx6Ru4BB5A?usp=drive_link" target="_blank"><b>here</b></a>. If you pass these on (e.g. to your studio), please let them know to tag me on Instagram for attribution.
+Please download these free of charge <a href="https://drive.google.com/drive/folders/1dz7jYt1GOpGp1Jq5jNVtBTTx6Ru4BB5A?usp=drive_link" target="_blank"><b>here</b></a>. If you pass these on (e.g. to your studio), please let them know to tag me on Instagram for attribution.
 
 ## Previews
 
