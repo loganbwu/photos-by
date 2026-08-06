@@ -19,8 +19,6 @@ Find your ID below and click the thumbnail to view your previews. Then continue 
 
 ## How to order performance media
 
-There are five purchase options:
-
 | Option | Price |
 |--------|-------|
 | Per photo (if ordering individually) | $15 |
@@ -35,7 +33,7 @@ Examples:
 1. You performed once on July 25th and twice on August 1st. You already paid $90 for aerials, so your pole media will cost $10.
 2. You and your doubles partner both also did solos. Your doubles partner only wants one photo. You can submit the form for $100 (solo x1 + doubles x1) and your partner can submit the form for $15 (photo x1).
 
-Videos are edited upon payment. Video edits include cuts between two cameras and sound mixed from original music and the audience. Original media are stored for at least 6 months after the event so you can always change your order.
+Videos are edited upon payment, and include sound mixed from original music and the audience. Media are stored for at least 6 months in case you change your order.
 
 Payment can be made to:\
 Name: Logan Wu\
@@ -44,15 +42,13 @@ Account: 8299 8746
 
 Please include the album ID number(s) in the reference.
 
-Note: your bank may not recognise the account name exactly as written here - this is normal.
-
 <a href="https://docs.google.com/forms/d/e/1FAIpQLScuHJNffBKiYe_VdJP4S7QLu43FgTQ2DSwHt2B1lZkOQ-0egw/viewform?usp=dialog" target="_blank" class="btn btn-lg">Go to order form</a>
 
 After you submit the form, I will email you with a Google Drive download link.
 
 ## Next event promotion
 
-Did you enjoy your experience with me and my team? If I shoot for an event organiser based on your referral, you (or a person of your choice) will receive your event media for free.
+Did you enjoy your media? If I shoot for an event organiser based on your referral, you (or a person of your choice) will receive your event media for free.
 
 ## Instagram handles
 
