@@ -2,6 +2,12 @@
 
 Thank you for performing at Inversion! This page contains details on how to access your media.
 
+## Miscellaneous media
+
+Non-performance media (venue, prizegiving, etc) can be viewed <a href="https://photosby.loganwu.co.nz/albums/?album=000_miscellaneous_inversion_aerials" target="_blank"><b>here</b></a>.
+
+You can download these <a href="https://drive.google.com/drive/folders/1gbnV4dBjkGjOE4al-IAKOuO0Dg7Ulj4m?usp=drive_link" target="_blank"><b>here</b></a>. If you pass these on (e.g. to your studio), please let them know to tag me on Instagram for attribution.
+
 ## Previews
 
 Find your ID below and click the thumbnail to view your previews. Then continue below for purchase options.
@@ -49,9 +55,3 @@ Thank you to my team for their support! I love being tagged on Instagram, and yo
 <a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a>\
 <a href="https://instagram.com/thigh_bruise" target="_blank">@thigh_bruise</a>\
 <a href="https://instagram.com/gillybeanbag" target="_blank">@gillybeanbag</a>
-
-## Miscellaneous media
-
-Non-performance media (venue, prizegiving, etc) can be viewed <a href="https://photosby.loganwu.co.nz/albums/?album=000_miscellaneous_inversion_aerials" target="_blank"><b>here</b></a>.
-
-You can download these <a href="https://drive.google.com/drive/folders/1gbnV4dBjkGjOE4al-IAKOuO0Dg7Ulj4m?usp=drive_link" target="_blank"><b>here</b></a>. If you pass these on (e.g. to your studio), please let them know to tag me on Instagram for attribution.

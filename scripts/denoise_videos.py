@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Denoise every video in a folder (recursively) using ffmpeg's vaguedenoiser filter.
+"""Denoise a video, or every video in a folder (recursively), using ffmpeg's
+vaguedenoiser filter.
 
 By default each video is left untouched — output is written alongside it as
-<name>_denoised<ext> (skipped if that file already exists). Pass an output
-folder as a second argument to instead write into that folder under each
-file's original name (no _denoised suffix), mirroring the input's subfolder
-structure. With --overwrite (mutually exclusive with an output folder), each
-source file is replaced in place instead (there's no way to transcode a
-video into its own bytes, so this still encodes to a temp file first and
-swaps it in once validated — but only one file's worth of extra space is
-ever in use at a time, and files are processed one at a time rather than in
-parallel, instead of the whole batch's worth of extra space at once).
+<name>_denoised<ext> (skipped if that file already exists). If the input is a
+folder, pass an output folder as a second argument to instead write into that
+folder under each file's original name (no _denoised suffix), mirroring the
+input's subfolder structure. If the input is a single file, pass an output
+file path as a second argument to write there instead. With --overwrite
+(mutually exclusive with an output folder/file), each source file is replaced
+in place instead (there's no way to transcode a video into its own bytes, so
+this still encodes to a temp file first and swaps it in once validated — but
+only one file's worth of extra space is ever in use at a time, and files are
+processed one at a time rather than in parallel, instead of the whole batch's
+worth of extra space at once).
 
 Each video is encoded in a single ffmpeg pass — never split into chunks.
 An earlier version chunked long videos and encoded the chunks of a single
@@ -30,7 +33,7 @@ footage.
 If the run looks likely to push disk usage past 90%, you'll be warned and
 asked to confirm, with a suggestion to use --overwrite if you aren't already.
 
-Usage: python3 denoise_videos.py <folder> [output_folder] [--mbps MBPS] [--overwrite]
+Usage: python3 denoise_videos.py <folder-or-file> [output_folder-or-file] [--mbps MBPS] [--overwrite]
 
 Requires ffmpeg on PATH. Uses hevc_videotoolbox hardware encoding when
 available (Apple Silicon), falling back to libx265.
@@ -172,15 +175,17 @@ def discover_videos(folder: Path) -> list[Path]:
     )
 
 
-def cleanup_stale_temp_files(folder: Path) -> None:
+def cleanup_stale_temp_files(folder: Path, pattern: str = '.*.denoising.tmp*') -> None:
     """Remove .*.denoising.tmp* files left behind by a previous run that got interrupted."""
-    for p in folder.rglob('.*.denoising.tmp*'):
+    for p in folder.rglob(pattern):
         if p.is_file():
             print(f"  Removing stale temp file from an interrupted run: {p.name}")
             p.unlink(missing_ok=True)
 
 
-def final_path_for(video: Path, input_folder: Path, output_folder: Path | None, overwrite: bool) -> Path:
+def _final_path_no_output(video: Path, overwrite: bool) -> Path:
+    """Final path when there's no output folder/file to target: overwrite in place,
+    or write <name>_denoised<ext> alongside the source."""
     if overwrite:
         # Same container extensions can hold HEVC as-is and get replaced under
         # their original name; anything else (e.g. .avi) gets swapped to .mp4 —
@@ -189,12 +194,23 @@ def final_path_for(video: Path, input_folder: Path, output_folder: Path | None, 
             return video
         return video.with_suffix('.mp4')
     ext = video.suffix if video.suffix.lower() in CONTAINER_PASSTHROUGH_EXTS else '.mp4'
-    if output_folder is not None:
-        # Written to a separate folder, mirroring the input's subfolder structure,
-        # so no name collision with the source — no need for a _denoised suffix.
-        rel = video.relative_to(input_folder).with_suffix(ext)
-        return output_folder / rel
     return video.parent / f"{video.stem}_denoised{ext}"
+
+
+def final_path_for(video: Path, input_folder: Path, output_folder: Path | None, overwrite: bool) -> Path:
+    if overwrite or output_folder is None:
+        return _final_path_no_output(video, overwrite)
+    # Written to a separate folder, mirroring the input's subfolder structure,
+    # so no name collision with the source — no need for a _denoised suffix.
+    ext = video.suffix if video.suffix.lower() in CONTAINER_PASSTHROUGH_EXTS else '.mp4'
+    rel = video.relative_to(input_folder).with_suffix(ext)
+    return output_folder / rel
+
+
+def single_final_path_for(video: Path, output: Path | None, overwrite: bool) -> Path:
+    if overwrite or output is None:
+        return _final_path_no_output(video, overwrite)
+    return output  # explicit output file path, used as-is
 
 
 def working_path_for(video: Path, final: Path, overwrite: bool) -> Path:
@@ -238,6 +254,29 @@ def build_jobs(files: list[Path], input_folder: Path, output_folder: Path | None
             timecode=get_timecode(video),
         ))
     return jobs
+
+
+def build_single_job(video: Path, output: Path | None, overwrite: bool) -> list[FileJob]:
+    final_path = single_final_path_for(video, output, overwrite)
+    if not overwrite and final_path.exists():
+        print(f"  SKIP (already denoised): {video.name}")
+        return []
+
+    duration = get_duration(video)
+    if duration is None:
+        print(f"  SKIP (unreadable): {video.name}")
+        return []
+
+    return [FileJob(
+        index=0,
+        path=video,
+        output=working_path_for(video, final_path, overwrite),
+        final_path=final_path,
+        duration=duration,
+        bit_rate=get_bit_rate(video),
+        pix_fmt=get_pix_fmt(video),
+        timecode=get_timecode(video),
+    )]
 
 
 def disk_usage_pct(folder: Path, extra_bytes: int) -> float:
@@ -421,22 +460,35 @@ def process_file(job: FileJob, tmp_dir: Path, encoder: list[str], hardware: bool
     return finalize(job, tmp_out, overwrite)
 
 
-def run(folder: Path, output_folder: Path | None, mbps: float | None, overwrite: bool) -> None:
+def run(input_path: Path, output: Path | None, mbps: float | None, overwrite: bool) -> None:
     if not shutil.which('ffmpeg') or not shutil.which('ffprobe'):
         print("ffmpeg/ffprobe not found on PATH. Install with: brew install ffmpeg")
         sys.exit(1)
 
-    cleanup_stale_temp_files(folder)
+    single_file = input_path.is_file()
 
-    if output_folder is not None:
-        output_folder.mkdir(parents=True, exist_ok=True)
+    if single_file:
+        # Tmp dir and stale-temp-file cleanup both need a directory to work with;
+        # `output` here is a specific target file, not a folder, so scan the
+        # source's own parent directory rather than mirroring the folder-mode path.
+        scan_root = input_path.parent
+        cleanup_stale_temp_files(scan_root, pattern=f".{input_path.stem}.denoising.tmp*")
+        if output is not None and not overwrite:
+            output.parent.mkdir(parents=True, exist_ok=True)
+        jobs = build_single_job(input_path, output, overwrite)
+        disk_target = jobs[0].final_path.parent if jobs else scan_root
+    else:
+        scan_root = input_path
+        cleanup_stale_temp_files(scan_root)
+        if output is not None:
+            output.mkdir(parents=True, exist_ok=True)
+        files = discover_videos(input_path)
+        print(f"Found {len(files)} video file(s) in {input_path}\n")
+        if not files:
+            sys.exit(0)
+        jobs = build_jobs(files, input_path, output, overwrite)
+        disk_target = output if output is not None else scan_root
 
-    files = discover_videos(folder)
-    print(f"Found {len(files)} video file(s) in {folder}\n")
-    if not files:
-        sys.exit(0)
-
-    jobs = build_jobs(files, folder, output_folder, overwrite)
     if not jobs:
         print("\nNothing to do.")
         sys.exit(0)
@@ -445,7 +497,7 @@ def run(folder: Path, output_folder: Path | None, mbps: float | None, overwrite:
     # whatever huge file happened to sort alphabetically first.
     jobs.sort(key=lambda j: j.path.stat().st_size)
 
-    confirm_disk_space(output_folder if output_folder is not None else folder, jobs, mbps, overwrite)
+    confirm_disk_space(disk_target, jobs, mbps, overwrite)
 
     encoder = pick_encoder()
     hardware = encoder[1] == 'hevc_videotoolbox'
@@ -453,7 +505,7 @@ def run(folder: Path, output_folder: Path | None, mbps: float | None, overwrite:
 
     succeeded = failed = skipped = 0
     lock = threading.Lock()
-    with tempfile.TemporaryDirectory(prefix='.denoise_videos_', dir=folder) as tmp_dir_str:
+    with tempfile.TemporaryDirectory(prefix='.denoise_videos_', dir=scan_root) as tmp_dir_str:
         tmp_dir = Path(tmp_dir_str)
         bar_format = "{l_bar}{bar}| {n:.1f}/{total} [{elapsed}<{remaining}, {rate_fmt}{postfix}]"
         with tqdm(total=len(jobs), desc="Total", unit="file", position=0, bar_format=bar_format) as pbar:
@@ -506,30 +558,35 @@ def run(folder: Path, output_folder: Path | None, mbps: float | None, overwrite:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('folder', type=Path, help='Folder to recursively scan for video files')
+    parser.add_argument('input', type=Path,
+                        help='A single video file, or a folder to recursively scan for video files')
     parser.add_argument('output', type=Path, nargs='?', default=None,
-                        help='Folder to write denoised videos into, mirroring the input\'s '
-                             'subfolder structure, under their original filenames (no '
-                             '_denoised suffix). Created if it doesn\'t exist. Default: write '
-                             '<name>_denoised<ext> alongside each source file instead.')
+                        help='If input is a folder: folder to write denoised videos into, '
+                             'mirroring the input\'s subfolder structure, under their original '
+                             'filenames (no _denoised suffix); created if it doesn\'t exist. '
+                             'If input is a single file: the exact output file path to write to. '
+                             'Default: write <name>_denoised<ext> alongside each source file instead.')
     parser.add_argument('--mbps', type=float, default=None,
                         help='Target video bitrate in Mbps (default: match each source file\'s own bitrate)')
     parser.add_argument('--overwrite', action='store_true',
                         help='Replace each source file in place instead of writing a '
-                             '_denoised copy alongside it. Cannot be combined with an output folder.')
+                             '_denoised copy alongside it. Cannot be combined with an output folder/file.')
     args = parser.parse_args()
 
     if args.output is not None and args.overwrite:
         parser.error("argument output: not allowed with argument --overwrite")
 
-    folder = args.folder.expanduser().resolve()
-    if not folder.exists():
-        print(f"Folder does not exist: {folder}")
+    input_path = args.input.expanduser().resolve()
+    if not input_path.exists():
+        print(f"Path does not exist: {input_path}")
         sys.exit(1)
 
-    output_folder = args.output.expanduser().resolve() if args.output is not None else None
+    output = args.output.expanduser().resolve() if args.output is not None else None
+    if output is not None and input_path.is_file() and output.is_dir():
+        parser.error(f"argument output: {output} is a directory, but input is a single file — "
+                      "pass the exact output file path instead")
 
-    run(folder, output_folder, args.mbps, args.overwrite)
+    run(input_path, output, args.mbps, args.overwrite)
 
 
 if __name__ == '__main__':
