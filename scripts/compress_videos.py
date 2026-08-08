@@ -331,7 +331,7 @@ def run(input_folder: Path, output_folder: Path, crf: int, preset: str) -> None:
         sys.exit(1)
 
 
-def main() -> None:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('input', type=Path, help='Folder to recursively scan for video files')
@@ -344,7 +344,11 @@ def main() -> None:
     parser.add_argument('--preset', default=DEFAULT_PRESET,
                         help=f'x265 encoding preset, trading encode time for compression '
                              f'efficiency (default: {DEFAULT_PRESET})')
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> None:
+    args = build_parser().parse_args()
 
     input_folder = args.input.expanduser().resolve()
     if not input_folder.exists():

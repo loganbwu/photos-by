@@ -8,8 +8,9 @@ or more than one are skipped.
 Usage: python3 sort_by_tag.py <folder>
 """
 
-import re
+import argparse
 import sys
+import re
 from pathlib import Path
 
 from PIL import Image
@@ -32,12 +33,17 @@ def get_tagged_keywords(path: Path) -> list[str]:
         return []
 
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: sort_by_tag.py <folder>")
-        sys.exit(1)
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('folder', type=Path, help='Folder of exported Lightroom photos')
+    return parser
 
-    folder = Path(sys.argv[1]).expanduser().resolve()
+
+def main():
+    args = build_parser().parse_args()
+
+    folder = args.folder.expanduser().resolve()
     if not folder.exists():
         print(f"Folder does not exist: {folder}")
         sys.exit(1)

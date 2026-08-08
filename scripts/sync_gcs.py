@@ -1,3 +1,11 @@
+"""Sync the local GCS staging directory (backend/gcs_local_staging) to the
+photos-by-logan-content bucket: uploads new/changed images, deletes ones no
+longer present locally, and regenerates each gallery's manifest.json.
+
+Usage: python3 sync_gcs.py
+"""
+
+import argparse
 import os
 import sys
 import json
@@ -233,8 +241,14 @@ def build_sequences_for_folder(image_list):
     return sequences
 
 
+def build_parser() -> argparse.ArgumentParser:
+    return argparse.ArgumentParser(description=__doc__,
+                                   formatter_class=argparse.RawDescriptionHelpFormatter)
+
+
 def main():
     """Main function to discover all images, process them with a global progress bar, and sync."""
+    build_parser().parse_args()
     print("Starting GCS synchronization process...")
     print(f"Local staging directory: '{os.path.abspath(LOCAL_STAGING_DIR)}'")
     print(f"Target GCS Bucket: 'gs://{GCS_BUCKET_NAME}/'")

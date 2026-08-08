@@ -159,7 +159,7 @@ def make_slideshow(folder: Path, output: Path, tail: float | None, interval: flo
     print(f"\nSaved: {output}")
 
 
-def main() -> None:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('folder', type=Path, help='Folder of images')
@@ -173,7 +173,11 @@ def main() -> None:
                              '(skips EXIF timestamp reading)')
     parser.add_argument('--test', action='store_true',
                         help='Stop after the first 10 images')
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> None:
+    args = build_parser().parse_args()
 
     folder = args.folder.expanduser().resolve()
     if not folder.exists():

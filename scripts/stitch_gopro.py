@@ -99,13 +99,17 @@ def output_name(files: list[Path]) -> str:
     return first.stem + '_stitched' + first.suffix.upper()
 
 
-def main() -> None:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('folder', type=Path, help='Folder containing GoPro files')
     parser.add_argument('output_folder', type=Path, nargs='?', default=None,
                         help='Destination folder (default: <folder>/stitched)')
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> None:
+    args = build_parser().parse_args()
 
     folder = args.folder.expanduser().resolve()
     if not folder.exists():

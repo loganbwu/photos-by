@@ -14,6 +14,7 @@ Usage: python3 first_by_tag.py <folder> [output_folder]
 Default output_folder: <folder>/thumbnails
 """
 
+import argparse
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -38,18 +39,25 @@ def save_thumbnail(src: Path, dest: Path) -> None:
         img.convert('RGB').save(dest, 'JPEG', quality=JPEG_QUALITY)
 
 
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: first_by_tag.py <folder> [output_folder]")
-        sys.exit(1)
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('folder', type=Path, help='Folder of images (searched recursively)')
+    parser.add_argument('output_folder', type=Path, nargs='?', default=None,
+                        help='Destination folder (default: <folder>/thumbnails)')
+    return parser
 
-    folder = Path(sys.argv[1]).expanduser().resolve()
+
+def main():
+    args = build_parser().parse_args()
+
+    folder = args.folder.expanduser().resolve()
     if not folder.exists():
         print(f"Folder does not exist: {folder}")
         sys.exit(1)
 
-    output_folder = (Path(sys.argv[2]).expanduser().resolve()
-                      if len(sys.argv) > 2 else folder / "thumbnails")
+    output_folder = (args.output_folder.expanduser().resolve()
+                      if args.output_folder is not None else folder / "thumbnails")
 
     files = sorted(p for p in folder.rglob('*')
                    if p.is_file() and p.suffix.lower() in IMAGE_EXTS

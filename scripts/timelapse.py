@@ -180,7 +180,7 @@ def make_timelapse(folder: Path, output: Path, width: int, height: int,
     print(f"\nSaved: {output}")
 
 
-def main() -> None:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('folder', type=Path, help='Folder of images')
@@ -201,7 +201,11 @@ def main() -> None:
                              'the output size — square photos are always included')
     parser.add_argument('--test', action='store_true',
                         help='Stop after the first 10 images')
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> None:
+    args = build_parser().parse_args()
 
     folder = args.folder.expanduser().resolve()
     if not folder.exists():

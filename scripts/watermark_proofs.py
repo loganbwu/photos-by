@@ -9,6 +9,7 @@ are .jpg regardless of the source format.
 Usage: python3 watermark_proofs.py <source> <dest>
 """
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -114,13 +115,19 @@ def process_image(src: Path, dest: Path) -> None:
         watermarked.save(dest, 'JPEG', quality=JPEG_QUALITY, exif=exif.tobytes())
 
 
-def main() -> None:
-    if len(sys.argv) < 3:
-        print("Usage: watermark_proofs.py <source> <dest>")
-        sys.exit(1)
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('source', type=Path, help='Folder of source photos (searched recursively)')
+    parser.add_argument('dest', type=Path, help='Folder to write watermarked JPEG proofs into')
+    return parser
 
-    source = Path(sys.argv[1]).expanduser().resolve()
-    dest = Path(sys.argv[2]).expanduser().resolve()
+
+def main() -> None:
+    args = build_parser().parse_args()
+
+    source = args.source.expanduser().resolve()
+    dest = args.dest.expanduser().resolve()
     if not source.exists():
         print(f"Source folder does not exist: {source}")
         sys.exit(1)
