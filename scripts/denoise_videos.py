@@ -85,9 +85,9 @@ HARDWARE_ENCODER_MAX_ATTEMPTS = 4
 # Running many files at once, each with a full-size pool for both, would badly
 # oversubscribe the CPU. Cap file-level concurrency low and divide the cores among
 # those concurrent jobs instead, for both the filter (-filter_threads) and the
-# encoder (-x265-params pools=N).
+# encoder (-x265-params pools=N) — see software_threads_per_job in run(), which sizes
+# that division to how many jobs are actually running concurrently, not just this cap.
 SOFTWARE_ENCODE_CONCURRENCY = min(WORKERS, 2)
-SOFTWARE_THREADS_PER_JOB = max(1, WORKERS // SOFTWARE_ENCODE_CONCURRENCY)
 
 # Run ffmpeg at the lowest scheduling/I/O priority so it only uses spare capacity
 # and gets out of the way of foreground work. On macOS, `taskpolicy -b -d throttle`
@@ -387,7 +387,8 @@ def _run_with_progress(cmd: list[str], duration_hint: float, pbars: list[tqdm],
 
 
 def encode_file(job: FileJob, tmp_dir: Path, encoder: list[str], hardware: bool, mbps: float | None,
-                 crf: float | None, pbars: list[tqdm], lock: threading.Lock) -> Path | None:
+                 crf: float | None, software_threads_per_job: int, pbars: list[tqdm],
+                 lock: threading.Lock) -> Path | None:
     fmt, profile = pixel_args(job.pix_fmt, hardware)
     vf = f"{DENOISE_FILTER},{fmt}" if fmt else DENOISE_FILTER
 
@@ -403,15 +404,16 @@ def encode_file(job: FileJob, tmp_dir: Path, encoder: list[str], hardware: bool,
     cmd = [*prefix, 'ffmpeg', '-y', '-nostdin', '-loglevel', 'error', '-progress', 'pipe:1', '-nostats']
     if not hardware and crf is not None:
         # Both the (slice-threaded) denoise filter and libx265 default to spawning a
-        # thread pool sized to all available cores — fine for one file at a time, but we
-        # run SOFTWARE_ENCODE_CONCURRENCY files at once, so cap each job's share of both
-        # to its fair share instead.
-        cmd += ['-filter_threads', str(SOFTWARE_THREADS_PER_JOB)]
+        # thread pool sized to all available cores — fine when this is the only job
+        # running, but not when other jobs are running concurrently too, so cap each
+        # job's share of both to its fair share of the actual concurrency in play
+        # (computed by the caller from how many jobs are really running at once).
+        cmd += ['-filter_threads', str(software_threads_per_job)]
     cmd += ['-i', str(job.path),
             '-vf', vf, *encoder, *profile, *rate_control_args(mbps, crf, job.bit_rate),
             '-tag:v', 'hvc1']
     if not hardware and crf is not None:
-        cmd += ['-x265-params', f'pools={SOFTWARE_THREADS_PER_JOB}']
+        cmd += ['-x265-params', f'pools={software_threads_per_job}']
     if job.timecode:
         cmd += ['-timecode', job.timecode]
     cmd += ['-c:a', 'copy', str(tmp_out)]
@@ -501,11 +503,12 @@ class FileBarPool:
 
 
 def process_file(job: FileJob, tmp_dir: Path, encoder: list[str], hardware: bool, mbps: float | None,
-                  crf: float | None, overall_pbar: tqdm, file_bars: FileBarPool, lock: threading.Lock,
-                  overwrite: bool) -> bool:
+                  crf: float | None, software_threads_per_job: int, overall_pbar: tqdm,
+                  file_bars: FileBarPool, lock: threading.Lock, overwrite: bool) -> bool:
     job.output.parent.mkdir(parents=True, exist_ok=True)
     file_pbar = file_bars.acquire(job)
-    tmp_out = encode_file(job, tmp_dir, encoder, hardware, mbps, crf, [overall_pbar, file_pbar], lock)
+    tmp_out = encode_file(job, tmp_dir, encoder, hardware, mbps, crf, software_threads_per_job,
+                           [overall_pbar, file_pbar], lock)
     return finalize(job, tmp_out, overwrite)
 
 
@@ -563,7 +566,9 @@ def run(input_path: Path, output: Path | None, mbps: float | None, crf: float | 
             if overwrite:
                 # One file at a time, so at most one extra file's worth of disk
                 # space is ever in use. A single file-progress bar is enough since
-                # only one file is ever active.
+                # only one file is ever active — which also means, unlike the
+                # concurrent-files branch below, this one job can use every core.
+                software_threads_per_job = WORKERS
                 file_bars = FileBarPool(1, base_position=1)
                 try:
                     for job in jobs:
@@ -574,8 +579,8 @@ def run(input_path: Path, output: Path | None, mbps: float | None, crf: float | 
                             skipped += 1
                             continue
 
-                        if process_file(job, tmp_dir, encoder, hardware, mbps, crf, pbar, file_bars,
-                                         lock, overwrite):
+                        if process_file(job, tmp_dir, encoder, hardware, mbps, crf, software_threads_per_job,
+                                         pbar, file_bars, lock, overwrite):
                             succeeded += 1
                         else:
                             failed += 1
@@ -586,11 +591,16 @@ def run(input_path: Path, output: Path | None, mbps: float | None, crf: float | 
                 # caps concurrency much lower than hardware mode — see SOFTWARE_ENCODE_CONCURRENCY.
                 max_concurrency = SOFTWARE_ENCODE_CONCURRENCY if not hardware and crf is not None else WORKERS
                 n_slots = min(max_concurrency, len(jobs))
+                # Divide the core budget by how many jobs are *actually* running at once
+                # (n_slots), not a fixed assumption — a single-file run (or a folder with
+                # fewer files than SOFTWARE_ENCODE_CONCURRENCY) should get the full budget
+                # rather than leaving cores idle for concurrency that isn't happening.
+                software_threads_per_job = max(1, WORKERS // n_slots)
                 file_bars = FileBarPool(n_slots, base_position=1)
                 try:
                     with ThreadPoolExecutor(max_workers=n_slots) as pool:
                         futures = [pool.submit(process_file, job, tmp_dir, encoder, hardware, mbps, crf,
-                                                pbar, file_bars, lock, overwrite)
+                                                software_threads_per_job, pbar, file_bars, lock, overwrite)
                                    for job in jobs]
                         for future in as_completed(futures):
                             if future.result():
