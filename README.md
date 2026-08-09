@@ -162,18 +162,19 @@ cd backend && rye run stitch-gopro /path/to/gopro/folder [output_folder]
 
 ### Denoising Video Footage
 
-`scripts/denoise_videos.py` recursively finds every video in a folder and denoises it with ffmpeg's `vaguedenoiser` filter (moderate settings). Each video is encoded in a single ffmpeg pass — never split into chunks, since chunking a file and encoding its pieces in parallel was producing brief audio glitches at chunk boundaries. Parallelism instead comes from encoding multiple files at once (default mode only — see `--overwrite` below). An overall progress bar (files completed + ETA) tracks the whole batch, plus one progress bar per file currently being encoded.
+`scripts/denoise_videos.py` recursively finds every video in a folder and denoises it with ffmpeg's `hqdn3d` filter (default strength). Each video is encoded in a single ffmpeg pass — never split into chunks, since chunking a file and encoding its pieces in parallel was producing brief audio glitches at chunk boundaries. Parallelism instead comes from encoding multiple files at once (default mode only — see `--overwrite` below). An overall progress bar (files completed + ETA) tracks the whole batch, plus one progress bar per file currently being encoded.
 
 ```bash
-cd backend && rye run denoise-videos /path/to/folder [output_folder] [--mbps N] [--overwrite]
+cd backend && rye run denoise-videos /path/to/folder [output_folder] [--mbps N | --crf N] [--overwrite]
 ```
 
 - By default, writes a `<name>_denoised<ext>` copy alongside each source file (originals untouched)
 - **`output_folder`** — write into this folder instead, under each file's original name (no `_denoised` suffix), mirroring the input's subfolder structure. Created if it doesn't exist. Cannot be combined with `--overwrite`
-- **`--mbps`** — target video bitrate in Mbps (default: match each source file's own bitrate)
+- **`--mbps`** — target video bitrate in Mbps (default: match each source file's own bitrate). Uses `hevc_videotoolbox` hardware encoding when available (Apple Silicon) for speed
+- **`--crf`** — quality target instead of a bitrate target (0-51, lower is better/bigger; ~18-20 is visually transparent, ~20-23 a good size/quality balance for footage that'll be graded and re-compressed for social media anyway). Forces software `libx265` encoding, since crf is meaningless to the hardware encoder and `libx265` is meaningfully more size-efficient — significantly slower, and runs far fewer files concurrently than hardware mode to avoid oversubscribing the CPU (each file gets its own thread-pool share instead). Cannot be combined with `--mbps`
 - **`--overwrite`** — replace each source file in place instead of writing a separate copy. True in-place transcoding isn't possible, so this still encodes to a temp file first and swaps it in once validated, but processes one file at a time so at most one file's worth of extra disk space is ever in use, rather than the whole batch's
 - If the run looks likely to push disk usage past 90%, you'll be warned and prompted to confirm, with a suggestion to use `--overwrite` if you aren't already
-- Requires `ffmpeg` on PATH (`brew install ffmpeg`); uses `hevc_videotoolbox` hardware encoding when available (Apple Silicon)
+- Requires `ffmpeg` on PATH (`brew install ffmpeg`)
 
 ---
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Denoise every video in a folder (recursively) using ffmpeg's vaguedenoiser filter.
+"""Denoise every video in a folder (recursively) using ffmpeg's hqdn3d filter.
 
 By default each video is left untouched — output is written alongside it as
 <name>_denoised<ext> (skipped if that file already exists). Pass an output
@@ -30,10 +30,21 @@ footage.
 If the run looks likely to push disk usage past 90%, you'll be warned and
 asked to confirm, with a suggestion to use --overwrite if you aren't already.
 
-Usage: python3 denoise_videos.py <folder> [output_folder] [--mbps MBPS] [--overwrite]
+By default, quality/size is controlled by matching each source file's own
+bitrate (or --mbps to target a specific one), using hevc_videotoolbox
+hardware encoding when available (Apple Silicon) for speed. Pass --crf
+instead for a quality target (consistent per-scene quality rather than a
+blanket bitrate) — this forces software libx265 encoding instead, since crf
+is meaningless to the hardware encoder and libx265 is meaningfully more
+size-efficient, at the cost of speed. Software encoding also runs far fewer
+files concurrently than hardware mode (each file gets a fair share of cores
+via -x265-params pools=N instead), since unlike the hardware encoder, a
+software encode isn't cheap on CPU — running many at once the way hardware
+mode does would badly oversubscribe the machine.
 
-Requires ffmpeg on PATH. Uses hevc_videotoolbox hardware encoding when
-available (Apple Silicon), falling back to libx265.
+Usage: python3 denoise_videos.py <folder> [output_folder] [--mbps MBPS | --crf CRF] [--overwrite]
+
+Requires ffmpeg on PATH.
 """
 
 import argparse
@@ -66,6 +77,15 @@ HARDWARE_ENCODE_CONCURRENCY = min(WORKERS, 2)
 HARDWARE_ENCODER_BUSY_MARKERS = ('Could not open encoder before EOF',)
 HARDWARE_ENCODER_MAX_ATTEMPTS = 4
 
+# Unlike hardware encoding, libx265 spins up its own internal thread pool per file, and
+# (with a slice-threaded denoise filter — see DENOISE_FILTER) so does the filter stage.
+# Running many files at once, each with a full-size pool for both, would badly
+# oversubscribe the CPU. Cap file-level concurrency low and divide the cores among
+# those concurrent jobs instead, for both the filter (-filter_threads) and the
+# encoder (-x265-params pools=N).
+SOFTWARE_ENCODE_CONCURRENCY = min(WORKERS, 2)
+SOFTWARE_THREADS_PER_JOB = max(1, WORKERS // SOFTWARE_ENCODE_CONCURRENCY)
+
 # Run ffmpeg at the lowest scheduling/I/O priority so it only uses spare capacity
 # and gets out of the way of foreground work. On macOS, `taskpolicy -b -d throttle`
 # lowers CPU scheduling priority (PRIO_DARWIN_BG) and this process's own disk I/O
@@ -80,9 +100,10 @@ elif shutil.which('nice'):
 else:
     BACKGROUND_PREFIX = []
 
-# vaguedenoiser: wavelet-based denoiser. These are "moderate" settings — enough
-# to clean sensor noise without visibly softening detail.
-DENOISE_FILTER = 'vaguedenoiser=threshold=2:method=soft:nsteps=6:percent=85'
+# hqdn3d: spatial+temporal denoiser, slice-threaded (unlike vaguedenoiser, which isn't
+# and was the previous default — see SOFTWARE_ENCODE_CONCURRENCY). Explicit defaults
+# (4:3:6:4.5 = luma_spatial:chroma_spatial:luma_tmp:chroma_tmp), visually validated.
+DENOISE_FILTER = 'hqdn3d=4:3:6:4.5'
 
 
 @dataclass
@@ -131,23 +152,34 @@ def is_valid_video(path: Path) -> bool:
     return path.exists() and path.stat().st_size > 0 and get_duration(path) is not None
 
 
-def pick_encoder() -> list[str]:
-    result = subprocess.run(['ffmpeg', '-encoders', '-v', 'quiet'], capture_output=True, text=True)
-    if 'hevc_videotoolbox' in result.stdout:
-        print("Encoder: hevc_videotoolbox (hardware)")
-        return ['-c:v', 'hevc_videotoolbox']
-    print("Encoder: libx265 (software)")
-    return ['-c:v', 'libx265', '-preset', 'medium']
+def pick_encoder(force_software: bool = False) -> list[str]:
+    # --crf implies libx265 (crf is a software-x265/x264 concept, meaningless to the
+    # hardware encoder), and is also a deliberate size-over-speed tradeoff, so use a
+    # slower/better preset than the plain software-fallback case.
+    if not force_software:
+        result = subprocess.run(['ffmpeg', '-encoders', '-v', 'quiet'], capture_output=True, text=True)
+        if 'hevc_videotoolbox' in result.stdout:
+            print("Encoder: hevc_videotoolbox (hardware)")
+            return ['-c:v', 'hevc_videotoolbox']
+    preset = 'slow' if force_software else 'medium'
+    print(f"Encoder: libx265 (software, preset {preset})")
+    return ['-c:v', 'libx265', '-preset', preset]
 
 
 def pixel_args(pix_fmt: str | None, hardware: bool) -> tuple[str, list[str]]:
     """Return (extra vf format filter, profile args) matching the source's bit depth/chroma.
 
-    Only meaningful for the videotoolbox hardware path — libx265 handles arbitrary
-    pixel formats on its own.
+    The vf filter is only meaningful for the videotoolbox hardware path, which needs an
+    explicit pixel format conversion; libx265 accepts the source's native pixel format
+    directly. Both paths still get an explicit -profile:v so a 10-bit source isn't
+    silently negotiated down to the 8-bit main profile.
     """
-    if not hardware or not pix_fmt:
+    if not pix_fmt:
         return '', []
+    if not hardware:
+        if '422' in pix_fmt and '10' in pix_fmt:
+            return '', ['-profile:v', 'main422-10']
+        return ('', ['-profile:v', 'main10']) if '10' in pix_fmt else ('', [])
     if '422' in pix_fmt:
         return 'format=p210le', ['-profile:v', 'main42210']
     if '10' in pix_fmt:
@@ -161,6 +193,14 @@ def bitrate_args(mbps: float | None, source_bit_rate: int | None) -> list[str]:
     if source_bit_rate:
         return ['-b:v', str(source_bit_rate)]
     return []
+
+
+def rate_control_args(mbps: float | None, crf: float | None, source_bit_rate: int | None) -> list[str]:
+    # crf is a quality target (consistent per-scene quality, unknown output size upfront);
+    # mbps/source-bitrate matching is a size target. Mutually exclusive — see main().
+    if crf is not None:
+        return ['-crf', str(crf)]
+    return bitrate_args(mbps, source_bit_rate)
 
 
 def discover_videos(folder: Path) -> list[Path]:
@@ -307,8 +347,8 @@ def _run_with_progress(cmd: list[str], duration_hint: float, pbars: list[tqdm],
     return proc.returncode, ''.join(stderr_chunks), last_frac
 
 
-def encode_file(job: FileJob, tmp_dir: Path, encoder: list[str], hardware: bool,
-                 mbps: float | None, pbars: list[tqdm], lock: threading.Lock) -> Path | None:
+def encode_file(job: FileJob, tmp_dir: Path, encoder: list[str], hardware: bool, mbps: float | None,
+                 crf: float | None, pbars: list[tqdm], lock: threading.Lock) -> Path | None:
     fmt, profile = pixel_args(job.pix_fmt, hardware)
     vf = f"{DENOISE_FILTER},{fmt}" if fmt else DENOISE_FILTER
 
@@ -321,9 +361,18 @@ def encode_file(job: FileJob, tmp_dir: Path, encoder: list[str], hardware: bool,
     # slowing it down proportionally. Software encoding doesn't have this problem,
     # so only nice/background that path.
     prefix = [] if hardware else BACKGROUND_PREFIX
-    cmd = [*prefix, 'ffmpeg', '-y', '-nostdin', '-loglevel', 'error',
-           '-progress', 'pipe:1', '-nostats', '-i', str(job.path),
-           '-vf', vf, *encoder, *profile, *bitrate_args(mbps, job.bit_rate)]
+    cmd = [*prefix, 'ffmpeg', '-y', '-nostdin', '-loglevel', 'error', '-progress', 'pipe:1', '-nostats']
+    if not hardware and crf is not None:
+        # Both the (slice-threaded) denoise filter and libx265 default to spawning a
+        # thread pool sized to all available cores — fine for one file at a time, but we
+        # run SOFTWARE_ENCODE_CONCURRENCY files at once, so cap each job's share of both
+        # to its fair share instead.
+        cmd += ['-filter_threads', str(SOFTWARE_THREADS_PER_JOB)]
+    cmd += ['-i', str(job.path),
+            '-vf', vf, *encoder, *profile, *rate_control_args(mbps, crf, job.bit_rate),
+            '-tag:v', 'hvc1']
+    if not hardware and crf is not None:
+        cmd += ['-x265-params', f'pools={SOFTWARE_THREADS_PER_JOB}']
     if job.timecode:
         cmd += ['-timecode', job.timecode]
     cmd += ['-c:a', 'copy', str(tmp_out)]
@@ -413,15 +462,16 @@ class FileBarPool:
 
 
 def process_file(job: FileJob, tmp_dir: Path, encoder: list[str], hardware: bool, mbps: float | None,
-                  overall_pbar: tqdm, file_bars: FileBarPool, lock: threading.Lock,
+                  crf: float | None, overall_pbar: tqdm, file_bars: FileBarPool, lock: threading.Lock,
                   overwrite: bool) -> bool:
     job.output.parent.mkdir(parents=True, exist_ok=True)
     file_pbar = file_bars.acquire(job)
-    tmp_out = encode_file(job, tmp_dir, encoder, hardware, mbps, [overall_pbar, file_pbar], lock)
+    tmp_out = encode_file(job, tmp_dir, encoder, hardware, mbps, crf, [overall_pbar, file_pbar], lock)
     return finalize(job, tmp_out, overwrite)
 
 
-def run(folder: Path, output_folder: Path | None, mbps: float | None, overwrite: bool) -> None:
+def run(folder: Path, output_folder: Path | None, mbps: float | None, crf: float | None,
+        overwrite: bool) -> None:
     if not shutil.which('ffmpeg') or not shutil.which('ffprobe'):
         print("ffmpeg/ffprobe not found on PATH. Install with: brew install ffmpeg")
         sys.exit(1)
@@ -447,7 +497,7 @@ def run(folder: Path, output_folder: Path | None, mbps: float | None, overwrite:
 
     confirm_disk_space(output_folder if output_folder is not None else folder, jobs, mbps, overwrite)
 
-    encoder = pick_encoder()
+    encoder = pick_encoder(force_software=crf is not None)
     hardware = encoder[1] == 'hevc_videotoolbox'
     print(f"{len(jobs)} file(s) to denoise\n")
 
@@ -472,19 +522,22 @@ def run(folder: Path, output_folder: Path | None, mbps: float | None, overwrite:
                             skipped += 1
                             continue
 
-                        if process_file(job, tmp_dir, encoder, hardware, mbps, pbar, file_bars, lock, overwrite):
+                        if process_file(job, tmp_dir, encoder, hardware, mbps, crf, pbar, file_bars,
+                                         lock, overwrite):
                             succeeded += 1
                         else:
                             failed += 1
                 finally:
                     file_bars.close()
             else:
-                # Files run in parallel, one progress bar each.
-                n_slots = min(WORKERS, len(jobs))
+                # Files run in parallel, one progress bar each. Forced-software (--crf) mode
+                # caps concurrency much lower than hardware mode — see SOFTWARE_ENCODE_CONCURRENCY.
+                max_concurrency = SOFTWARE_ENCODE_CONCURRENCY if not hardware and crf is not None else WORKERS
+                n_slots = min(max_concurrency, len(jobs))
                 file_bars = FileBarPool(n_slots, base_position=1)
                 try:
                     with ThreadPoolExecutor(max_workers=n_slots) as pool:
-                        futures = [pool.submit(process_file, job, tmp_dir, encoder, hardware, mbps,
+                        futures = [pool.submit(process_file, job, tmp_dir, encoder, hardware, mbps, crf,
                                                 pbar, file_bars, lock, overwrite)
                                    for job in jobs]
                         for future in as_completed(futures):
@@ -514,6 +567,13 @@ def main() -> None:
                              '<name>_denoised<ext> alongside each source file instead.')
     parser.add_argument('--mbps', type=float, default=None,
                         help='Target video bitrate in Mbps (default: match each source file\'s own bitrate)')
+    parser.add_argument('--crf', type=float, default=None,
+                        help='Quality-based target (0-51, lower is better quality/bigger files; '
+                             '~18-20 is visually transparent, ~20-23 a good size/quality balance) '
+                             'instead of a bitrate target. Forces software libx265 encoding (crf is '
+                             'meaningless to the hardware encoder), at a slower preset and lower '
+                             'file-level concurrency to avoid oversubscribing the CPU. Cannot be '
+                             'combined with --mbps.')
     parser.add_argument('--overwrite', action='store_true',
                         help='Replace each source file in place instead of writing a '
                              '_denoised copy alongside it. Cannot be combined with an output folder.')
@@ -521,6 +581,8 @@ def main() -> None:
 
     if args.output is not None and args.overwrite:
         parser.error("argument output: not allowed with argument --overwrite")
+    if args.crf is not None and args.mbps is not None:
+        parser.error("argument --crf: not allowed with argument --mbps")
 
     folder = args.folder.expanduser().resolve()
     if not folder.exists():
@@ -529,7 +591,7 @@ def main() -> None:
 
     output_folder = args.output.expanduser().resolve() if args.output is not None else None
 
-    run(folder, output_folder, args.mbps, args.overwrite)
+    run(folder, output_folder, args.mbps, args.crf, args.overwrite)
 
 
 if __name__ == '__main__':
