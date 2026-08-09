@@ -4,14 +4,17 @@ archival, while keeping the output editable in DaVinci Resolve.
 
 Each file is encoded with:
 
-    ffmpeg -i input -c:v libx265 -pix_fmt yuv420p10le -crf CRF -preset PRESET \
-           -tag:v hvc1 -c:a copy output.mp4
+    ffmpeg -i input -c:v libx265 -pix_fmt <matches source> -profile:v <matches source> \
+           -crf CRF -preset PRESET -tag:v hvc1 -c:a copy output.mp4
 
 - CRF (quality-based, not a target bitrate) keeps detail where it matters and
   compresses hard where it doesn't, which suits archival better than a fixed
   bitrate.
-- 10-bit 4:2:0 output reduces banding and compresses better with x265 even from
-  8-bit sources.
+- Chroma subsampling always matches the source (4:2:0 stays 4:2:0, 4:2:2 stays
+  4:2:2, etc.) — never silently downgraded. If a source's chroma can't be
+  determined, it's upgraded to 4:2:2 rather than assumed to be the lower-quality
+  4:2:0. Bit depth is always upgraded to 10-bit, even from 8-bit sources, since
+  that reduces banding and compresses better with x265.
 - The `hvc1` tag (rather than the default `hev1`) is what makes QuickTime,
   Final Cut, and Resolve recognise the HEVC stream and read it back correctly;
   without it some of those tools misdetect the codec.
@@ -77,6 +80,7 @@ class FileJob:
     path: Path
     final_path: Path
     duration: float
+    pix_fmt: str | None
     timecode: str | None
 
 
@@ -99,6 +103,26 @@ def get_duration(path: Path) -> float | None:
 
 def get_timecode(path: Path) -> str | None:
     return _probe(path, 'stream_tags=timecode', select_streams='d') or None
+
+
+def get_pix_fmt(path: Path) -> str | None:
+    return _probe(path, 'stream=pix_fmt', select_streams='v:0') or None
+
+
+def pix_fmt_args(pix_fmt: str | None) -> tuple[str, list[str]]:
+    """Return (-pix_fmt value, -profile:v args) that preserve the source's chroma
+    subsampling while always upgrading to 10-bit. If the source's chroma can't be
+    determined, upgrade to 4:2:2 rather than risk silently downgrading a source that
+    might be 4:2:2 or better — better to use more space than to lose chroma resolution
+    the source actually had.
+    """
+    if pix_fmt and '444' in pix_fmt:
+        return 'yuv444p10le', ['-profile:v', 'main444-10']
+    if pix_fmt and '422' in pix_fmt:
+        return 'yuv422p10le', ['-profile:v', 'main422-10']
+    if pix_fmt and '420' in pix_fmt:
+        return 'yuv420p10le', ['-profile:v', 'main10']
+    return 'yuv422p10le', ['-profile:v', 'main422-10']
 
 
 def is_valid_video(path: Path) -> bool:
@@ -144,6 +168,7 @@ def build_jobs(files: list[Path], input_folder: Path, output_folder: Path) -> li
             path=video,
             final_path=final_path,
             duration=duration,
+            pix_fmt=get_pix_fmt(video),
             timecode=get_timecode(video),
         ))
     return jobs
@@ -208,10 +233,11 @@ def _run_with_progress(cmd: list[str], duration_hint: float, pbars: list[tqdm],
 def encode_file(job: FileJob, tmp_dir: Path, crf: int, preset: str,
                  pbars: list[tqdm], lock: threading.Lock) -> Path | None:
     tmp_out = tmp_dir / f"{job.index:04d}.mp4"
+    pix_fmt, profile = pix_fmt_args(job.pix_fmt)
 
     cmd = [*BACKGROUND_PREFIX, 'ffmpeg', '-y', '-nostdin', '-loglevel', 'error',
            '-progress', 'pipe:1', '-nostats', '-i', str(job.path),
-           '-c:v', 'libx265', '-pix_fmt', 'yuv420p10le', '-crf', str(crf), '-preset', preset,
+           '-c:v', 'libx265', '-pix_fmt', pix_fmt, *profile, '-crf', str(crf), '-preset', preset,
            '-tag:v', 'hvc1']
     if job.timecode:
         cmd += ['-timecode', job.timecode]

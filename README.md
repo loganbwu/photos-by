@@ -180,7 +180,7 @@ cd backend && uv run python ../scripts/denoise_videos.py /path/to/folder-or-file
 
 ### Compressing Video Footage for Archival
 
-`scripts/compress_videos.py` recursively finds every video in a folder and re-encodes it with libx265 (CRF-based, 10-bit 4:2:0, `hvc1` tag) to shrink storage footprint while keeping the result readable by DaVinci Resolve/QuickTime/Final Cut. Audio is stream-copied (no re-encode, no A/V drift) and the source's timecode track, if any, is preserved so the clip still lines up on Resolve's timeline. An overall progress bar (files completed + ETA) tracks the whole batch, plus one progress bar per file currently being encoded.
+`scripts/compress_videos.py` recursively finds every video in a folder and re-encodes it with libx265 (CRF-based, always 10-bit, chroma subsampling matched to the source — never silently downgraded — with `hvc1` tag) to shrink storage footprint while keeping the result readable by DaVinci Resolve/QuickTime/Final Cut. Audio is stream-copied (no re-encode, no A/V drift) and the source's timecode track, if any, is preserved so the clip still lines up on Resolve's timeline. An overall progress bar (files completed + ETA) tracks the whole batch, plus one progress bar per file currently being encoded.
 
 ```bash
 cd backend && uv run python ../scripts/compress_videos.py /path/to/folder /path/to/output_folder [--crf N] [--preset NAME]
