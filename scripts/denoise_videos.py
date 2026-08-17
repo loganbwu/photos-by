@@ -29,17 +29,33 @@ so can't be recognised by a _denoised suffix. Pass --force to denoise
 everything regardless, bypassing both this check and the "output already
 exists" check.
 
+GoPro footage is skipped outright (identified by filename, e.g. GX010001.MP4,
+GH010001.MP4, GOPR0001.MP4, GP010001.MP4) — its sensor noise profile doesn't
+respond well to hqdn3d, so it's left for compress_videos.py to handle instead.
+
 Requires HandBrakeCLI and ffprobe (part of ffmpeg) on PATH
 (brew install handbrake ffmpeg).
 """
 
 import argparse
+import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 VIDEO_EXTS = {'.mp4', '.mov', '.m4v', '.avi', '.mkv', '.mts', '.m2ts', '.wmv', '.flv', '.webm'}
+
+_GOPRO_PATTERNS = [
+    re.compile(r'^G[HXS]\d{2}\d{4}\.mp4$', re.IGNORECASE),
+    re.compile(r'^GOPR\d{4}\.mp4$', re.IGNORECASE),
+    re.compile(r'^GP\d{2}\d{4}\.mp4$', re.IGNORECASE),
+]
+
+
+def is_gopro(path: Path) -> bool:
+    return any(p.match(path.name) for p in _GOPRO_PATTERNS)
+
 
 # Containers HandBrake can write directly; anything else (.avi, .mts, ...) gets
 # remuxed to .mp4 — HandBrake silently falls back to MP4 for an unrecognized
@@ -140,6 +156,10 @@ def run(input_path: Path, output: Path | None, quality: float, overwrite: bool, 
 
     succeeded = failed = skipped = 0
     for source, final_path, check_processed in jobs:
+        if not force and is_gopro(source):
+            print(f"SKIP (GoPro footage, not denoised): {source.name}")
+            skipped += 1
+            continue
         if not force and not overwrite and final_path.exists():
             print(f"SKIP (already denoised): {source.name}")
             skipped += 1
