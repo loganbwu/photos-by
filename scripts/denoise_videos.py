@@ -4,13 +4,12 @@ with the hqdn3d filter and an x265_10bit encode — the settings from a manual
 HandBrake CLI run that worked much better than an earlier ffmpeg-based version
 of this script.
 
-By default each video is left untouched — output is written alongside it as
-<name>_denoised<ext> (skipped if that file already exists). If the input is a
-folder, pass an output folder as a second argument to instead write into that
-folder under each file's original name (no _denoised suffix), mirroring the
-input's subfolder structure. If the input is a single file, pass an output
-file path as a second argument to write there instead. With --overwrite
-(mutually exclusive with an output folder/file), each source file is replaced
+By default (no output argument), a folder input is denoised into a new
+sibling folder named <input>_denoised, mirroring the input's subfolder
+structure; a single file is denoised alongside itself as <name>_denoised<ext>.
+Pass an output folder/file as a second argument to write there instead. A
+file is skipped if its corresponding output already exists. With --overwrite
+(mutually exclusive with an output argument), each source file is replaced
 in place instead: encoded to a temp file next to it first, then swapped in
 once the encode succeeds.
 
@@ -25,9 +24,9 @@ tag are skipped as already processed — Canon cameras (both the R line and the
 Cinema line) leave this tag unset on their originals, while ffmpeg, HandBrake,
 and DaVinci Resolve all stamp one in when they write a file. This mainly
 matters for --overwrite, where a processed file keeps its original name and
-so can't be recognised by a _denoised suffix. Pass --force to denoise
-everything regardless, bypassing both this check and the "output already
-exists" check.
+so can't be recognised by the "output already exists" check. Pass --force to
+denoise everything regardless, bypassing both this check and the "output
+already exists" check.
 
 GoPro footage is skipped outright (identified by filename, e.g. GX010001.MP4,
 GH010001.MP4, GOPR0001.MP4, GP010001.MP4) — its sensor noise profile doesn't
@@ -93,13 +92,18 @@ def output_ext(source_ext: str) -> str:
     return source_ext if source_ext.lower() in FORMAT_BY_EXT else '.mp4'
 
 
-def final_path_for(video: Path, input_folder: Path, output_folder: Path | None, overwrite: bool) -> Path:
+def default_output_for(input_path: Path) -> Path:
+    if input_path.is_dir():
+        return input_path.parent / f"{input_path.name}_denoised"
+    ext = output_ext(input_path.suffix)
+    return input_path.parent / f"{input_path.stem}_denoised{ext}"
+
+
+def final_path_for(video: Path, input_folder: Path, output_folder: Path, overwrite: bool) -> Path:
     ext = output_ext(video.suffix)
     if overwrite:
         return video if video.suffix.lower() in FORMAT_BY_EXT else video.with_suffix(ext)
-    if output_folder is not None:
-        return output_folder / video.relative_to(input_folder).with_suffix(ext)
-    return video.parent / f"{video.stem}_denoised{ext}"
+    return output_folder / video.relative_to(input_folder).with_suffix(ext)
 
 
 def denoise(source: Path, dest: Path, quality: float) -> bool:
@@ -145,10 +149,12 @@ def run(input_path: Path, output: Path | None, quality: float, overwrite: bool, 
     # Only skip already-processed files when scanning a folder — a single
     # file passed explicitly is denoised regardless of its encoder tag.
     if input_path.is_file():
-        jobs = [(input_path, output if output is not None else
-                 final_path_for(input_path, input_path.parent, None, overwrite), False)]
+        final_path = final_path_for(input_path, input_path.parent, output, overwrite)
+        if not overwrite:
+            final_path.parent.mkdir(parents=True, exist_ok=True)
+        jobs = [(input_path, final_path, False)]
     else:
-        if output is not None and not overwrite:
+        if not overwrite:
             output.mkdir(parents=True, exist_ok=True)
         files = discover_videos(input_path)
         print(f"Found {len(files)} video file(s) in {input_path}\n")
@@ -185,10 +191,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help='A single video file, or a folder to recursively scan for video files')
     parser.add_argument('output', type=Path, nargs='?', default=None,
                         help='If input is a folder: folder to write denoised videos into, '
-                             'mirroring the input\'s subfolder structure, under their original '
-                             'filenames (no _denoised suffix); created if it doesn\'t exist. '
-                             'If input is a single file: the exact output file path to write to. '
-                             'Default: write <name>_denoised<ext> alongside each source file instead.')
+                             'mirroring the input\'s subfolder structure; created if it doesn\'t '
+                             'exist. Default: <input>_denoised alongside the input folder. If '
+                             'input is a single file: the exact output file path to write to. '
+                             'Default: <name>_denoised<ext> alongside the source file.')
     parser.add_argument('--quality', type=float, default=QUALITY_DEFAULT,
                         help=f'HandBrake constant-quality value for -q; lower is higher quality '
                              f'(default: {QUALITY_DEFAULT})')
@@ -214,10 +220,15 @@ def main() -> None:
         print(f"Path does not exist: {input_path}")
         sys.exit(1)
 
-    output = args.output.expanduser().resolve() if args.output is not None else None
-    if output is not None and input_path.is_file() and output.is_dir():
-        parser.error(f"argument output: {output} is a directory, but input is a single file — "
-                      "pass the exact output file path instead")
+    if args.overwrite:
+        output = None
+    elif args.output is not None:
+        output = args.output.expanduser().resolve()
+        if input_path.is_file() and output.is_dir():
+            parser.error(f"argument output: {output} is a directory, but input is a single file — "
+                          "pass the exact output file path instead")
+    else:
+        output = default_output_for(input_path)
 
     run(input_path, output, args.quality, args.overwrite, args.force)
 
