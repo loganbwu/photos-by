@@ -162,23 +162,24 @@ cd backend && uv run python ../scripts/stitch_gopro.py /path/to/gopro/folder [ou
 
 ### Denoising Video Footage
 
-`scripts/denoise_videos.py` recursively finds every video in a folder and denoises it via HandBrakeCLI (`hqdn3d` filter, x265_10bit encoder) — settings from a manual HandBrake CLI run that worked much better than an earlier ffmpeg-based version of this script. Files are processed one at a time; HandBrakeCLI prints its own live progress.
+`scripts/denoise_videos.py` denoises a single video, or recursively finds and denoises every video in a folder, via HandBrakeCLI (`hqdn3d` filter, x265_10bit encoder) — settings from a manual HandBrake CLI run that worked much better than an earlier ffmpeg-based version of this script. Files are processed one at a time, in chronological order of file creation date; HandBrakeCLI prints its own live progress.
 
 ```bash
-cd backend && uv run python ../scripts/denoise_videos.py /path/to/folder [output_folder] [--quality Q] [--overwrite]
+cd backend && uv run python ../scripts/denoise_videos.py /path/to/folder-or-file [output_folder_or_file] [--quality Q] [--overwrite]
 ```
 
 - By default, writes a `<name>_denoised<ext>` copy alongside each source file (originals untouched)
-- **`output_folder`** — write into this folder instead, under each file's original name (no `_denoised` suffix), mirroring the input's subfolder structure. Created if it doesn't exist. Cannot be combined with `--overwrite`
+- **`output_folder_or_file`** — if the input is a folder, write into this folder instead, under each file's original name (no `_denoised` suffix), mirroring the input's subfolder structure; if the input is a single file, the exact output file path to write to. Created if it doesn't exist. Cannot be combined with `--overwrite`
 - **`--quality`** — HandBrake constant-quality value passed to `-q`; lower is higher quality (default: 16.0)
 - **`--overwrite`** — replace each source file in place instead of writing a separate copy. True in-place transcoding isn't possible, so this still encodes to a temp file first and swaps it in once it succeeds
-- Requires `HandBrakeCLI` on PATH (`brew install handbrake`)
+- When scanning a folder, files that already carry a container-level `encoder` tag are skipped as already processed — Canon cameras (R line and Cinema line) leave this unset on their originals, while ffmpeg, HandBrake, and DaVinci Resolve all stamp one in
+- Requires `HandBrakeCLI` and `ffprobe` (part of ffmpeg) on PATH (`brew install handbrake ffmpeg`)
 
 ---
 
 ### Compressing Video Footage for Archival
 
-`scripts/compress_videos.py` recursively finds every video in a folder and re-encodes it with libx265 (CRF-based, 10-bit 4:2:0, `hvc1` tag) to shrink storage footprint while keeping the result readable by DaVinci Resolve/QuickTime/Final Cut. Audio is stream-copied (no re-encode, no A/V drift) and the source's timecode track, if any, is preserved so the clip still lines up on Resolve's timeline. An overall progress bar (files completed + ETA) tracks the whole batch, plus one progress bar per file currently being encoded.
+`scripts/compress_videos.py` recursively finds every video in a folder and re-encodes it with libx265 (CRF-based, always 10-bit, chroma subsampling matched to the source — never silently downgraded — with `hvc1` tag) to shrink storage footprint while keeping the result readable by DaVinci Resolve/QuickTime/Final Cut. Audio is stream-copied (no re-encode, no A/V drift) and the source's timecode track, if any, is preserved so the clip still lines up on Resolve's timeline. An overall progress bar (files completed + ETA) tracks the whole batch, plus one progress bar per file currently being encoded.
 
 ```bash
 cd backend && uv run python ../scripts/compress_videos.py /path/to/folder /path/to/output_folder [--crf N] [--preset NAME]
