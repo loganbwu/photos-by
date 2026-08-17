@@ -14,13 +14,21 @@ file path as a second argument to write there instead. With --overwrite
 in place instead: encoded to a temp file next to it first, then swapped in
 once the encode succeeds.
 
-Files are processed one at a time, in HandBrakeCLI's own default order — no
-progress bar of our own; HandBrakeCLI already prints live "Encoding: ..." and
-"Muxing: ..." lines.
+Files are processed one at a time, in chronological order of file creation
+date — no progress bar of our own; HandBrakeCLI already prints live
+"Encoding: ..." and "Muxing: ..." lines.
 
 Usage: python3 denoise_videos.py <folder-or-file> [output_folder-or-file] [--quality Q] [--overwrite]
 
-Requires HandBrakeCLI on PATH (brew install handbrake).
+When scanning a folder, files that already carry a container-level "encoder"
+tag are skipped as already processed — Canon cameras (both the R line and the
+Cinema line) leave this tag unset on their originals, while ffmpeg, HandBrake,
+and DaVinci Resolve all stamp one in when they write a file. This mainly
+matters for --overwrite, where a processed file keeps its original name and
+so can't be recognised by a _denoised suffix.
+
+Requires HandBrakeCLI and ffprobe (part of ffmpeg) on PATH
+(brew install handbrake ffmpeg).
 """
 
 import argparse
@@ -42,11 +50,25 @@ HQDN3D = 'y-spatial=4:cb-spatial=3:cr-spatial=3:y-temporal=6:cb-temporal=4.5:cr-
 QUALITY_DEFAULT = 16.0
 
 
+def creation_time(path: Path) -> float:
+    stat = path.stat()
+    return getattr(stat, 'st_birthtime', stat.st_ctime)
+
+
 def discover_videos(folder: Path) -> list[Path]:
-    return sorted(
+    files = [
         p for p in folder.rglob('*')
         if p.is_file() and p.suffix.lower() in VIDEO_EXTS and not p.stem.endswith('_denoised')
-    )
+    ]
+    return sorted(files, key=creation_time)
+
+
+def already_processed(path: Path) -> bool:
+    result = subprocess.run(
+        ['ffprobe', '-v', 'error', '-show_entries', 'format_tags=encoder',
+         '-of', 'default=noprint_wrappers=1:nokey=1', str(path)],
+        capture_output=True, text=True)
+    return bool(result.stdout.strip())
 
 
 def output_ext(source_ext: str) -> str:
@@ -98,21 +120,30 @@ def run(input_path: Path, output: Path | None, quality: float, overwrite: bool) 
     if not shutil.which('HandBrakeCLI'):
         print("HandBrakeCLI not found on PATH. Install with: brew install handbrake")
         sys.exit(1)
+    if not shutil.which('ffprobe'):
+        print("ffprobe not found on PATH. Install with: brew install ffmpeg")
+        sys.exit(1)
 
+    # Only skip already-processed files when scanning a folder — a single
+    # file passed explicitly is denoised regardless of its encoder tag.
     if input_path.is_file():
         jobs = [(input_path, output if output is not None else
-                 final_path_for(input_path, input_path.parent, None, overwrite))]
+                 final_path_for(input_path, input_path.parent, None, overwrite), False)]
     else:
         if output is not None and not overwrite:
             output.mkdir(parents=True, exist_ok=True)
         files = discover_videos(input_path)
         print(f"Found {len(files)} video file(s) in {input_path}\n")
-        jobs = [(f, final_path_for(f, input_path, output, overwrite)) for f in files]
+        jobs = [(f, final_path_for(f, input_path, output, overwrite), True) for f in files]
 
     succeeded = failed = skipped = 0
-    for source, final_path in jobs:
+    for source, final_path, check_processed in jobs:
         if not overwrite and final_path.exists():
             print(f"SKIP (already denoised): {source.name}")
+            skipped += 1
+            continue
+        if check_processed and already_processed(source):
+            print(f"SKIP (already processed — has encoder tag): {source.name}")
             skipped += 1
             continue
         if process(source, final_path, quality, overwrite):
