@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""Compress every video in a folder (recursively) with ffmpeg/libx265 for long-term
-archival, while keeping the output editable in DaVinci Resolve.
+"""Compress every video in a folder (recursively) with HandBrakeCLI's x265_10bit
+encoder for long-term archival, while keeping the output editable in DaVinci
+Resolve — the same HandBrakeCLI settings denoise_videos.py uses, minus the
+hqdn3d denoise filter.
 
 Each file is encoded with:
 
-    ffmpeg -i input -c:v libx265 -pix_fmt <matches source> -profile:v <matches source> \
-           -crf CRF -preset PRESET -tag:v hvc1 -c:a copy output.mp4
+    HandBrakeCLI -i input -o output -f av_mp4 -e x265_10bit \
+                 --encoder-preset PRESET --encoder-profile <matches source> \
+                 -q CRF --color-range full -E copy --crop-mode none
 
-- CRF (quality-based, not a target bitrate) keeps detail where it matters and
+- -q (quality-based, not a target bitrate) keeps detail where it matters and
   compresses hard where it doesn't, which suits archival better than a fixed
   bitrate.
 - Chroma subsampling always matches the source (4:2:0 stays 4:2:0, 4:2:2 stays
@@ -15,163 +18,73 @@ Each file is encoded with:
   determined, it's upgraded to 4:2:2 rather than assumed to be the lower-quality
   4:2:0. Bit depth is always upgraded to 10-bit, even from 8-bit sources, since
   that reduces banding and compresses better with x265.
-- The `hvc1` tag (rather than the default `hev1`) is what makes QuickTime,
-  Final Cut, and Resolve recognise the HEVC stream and read it back correctly;
-  without it some of those tools misdetect the codec.
-- Audio is stream-copied, not re-encoded, so there's no quality loss or A/V
-  drift, and the source's timecode track (if any) is preserved so the clip
-  still lines up on Resolve's timeline.
+- Audio is passed through with -E copy, so there's no quality loss or A/V drift.
 
 Every output is always an .mp4, mirroring the input's subfolder structure
-under the output folder (so no name collision with the source, and hvc1 is
-only ever written into a container that supports it). A file is skipped if
-its corresponding output already exists.
+under the output folder. A file is skipped if its corresponding output already
+exists.
 
-Each video is encoded in a single ffmpeg pass. An overall progress bar tracks
-files completed across the whole batch, with ETA, plus one progress bar per
-file currently being encoded, updated continuously from ffmpeg's own progress
-stream rather than only jumping when a file finishes.
+Files are processed one at a time, in the order they're discovered — no
+progress bar of our own; HandBrakeCLI already prints live "Encoding: ..." and
+"Muxing: ..." lines. Running multiple HandBrakeCLI jobs at once was tried and
+dropped: a single --encoder-preset slow x265 job already saturates every core,
+so concurrency only added contention, not throughput.
 
 If the run looks likely to push disk usage past 90%, you'll be warned and
 asked to confirm.
 
 Usage: python3 compress_videos.py <input_folder> <output_folder> [--crf CRF] [--preset PRESET]
 
-Requires ffmpeg on PATH.
+Requires HandBrakeCLI and ffprobe (part of ffmpeg) on PATH
+(brew install handbrake ffmpeg).
 """
 
 import argparse
-import os
-import platform
 import shutil
 import subprocess
 import sys
-import tempfile
-import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
 from pathlib import Path
-
-from tqdm import tqdm
 
 VIDEO_EXTS = {'.mp4', '.mov', '.m4v', '.avi', '.mkv', '.mts', '.m2ts', '.wmv', '.flv', '.webm'}
 
-WORKERS = max(1, (os.cpu_count() or 2) - 1)  # max files encoded concurrently; leave one core free
 DISK_WARN_PCT = 90
-
 DEFAULT_CRF = 20
 DEFAULT_PRESET = 'slow'
 
-# Run ffmpeg at the lowest scheduling/I/O priority so it only uses spare capacity
-# and gets out of the way of foreground work. On macOS, `taskpolicy -b -d throttle`
-# lowers CPU scheduling priority (PRIO_DARWIN_BG) and this process's own disk I/O
-# priority.
-if platform.system() == 'Darwin' and shutil.which('taskpolicy'):
-    BACKGROUND_PREFIX = ['taskpolicy', '-b', '-d', 'throttle']
-elif shutil.which('nice'):
-    BACKGROUND_PREFIX = ['nice', '-n', '19']
-else:
-    BACKGROUND_PREFIX = []
-
-
-@dataclass
-class FileJob:
-    index: int
-    path: Path
-    final_path: Path
-    duration: float
-    pix_fmt: str | None
-    timecode: str | None
-
-
-def _probe(path: Path, *entries: str, select_streams: str | None = None) -> str:
-    cmd = ['ffprobe', '-v', 'error']
-    if select_streams:
-        cmd += ['-select_streams', select_streams]
-    cmd += ['-show_entries', *entries, '-of', 'default=noprint_wrappers=1:nokey=1', str(path)]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    return result.stdout.strip()
-
-
-def get_duration(path: Path) -> float | None:
-    raw = _probe(path, 'format=duration')
-    try:
-        return float(raw)
-    except ValueError:
-        return None
-
-
-def get_timecode(path: Path) -> str | None:
-    return _probe(path, 'stream_tags=timecode', select_streams='d') or None
-
 
 def get_pix_fmt(path: Path) -> str | None:
-    return _probe(path, 'stream=pix_fmt', select_streams='v:0') or None
+    result = subprocess.run(
+        ['ffprobe', '-v', 'error', '-select_streams', 'v:0',
+         '-show_entries', 'stream=pix_fmt', '-of', 'default=noprint_wrappers=1:nokey=1', str(path)],
+        capture_output=True, text=True)
+    return result.stdout.strip() or None
 
 
-def pix_fmt_args(pix_fmt: str | None) -> tuple[str, list[str]]:
-    """Return (-pix_fmt value, -profile:v args) that preserve the source's chroma
-    subsampling while always upgrading to 10-bit. If the source's chroma can't be
-    determined, upgrade to 4:2:2 rather than risk silently downgrading a source that
-    might be 4:2:2 or better — better to use more space than to lose chroma resolution
-    the source actually had.
+def profile_for(pix_fmt: str | None) -> str:
+    """Return the HandBrake --encoder-profile value that preserves the source's
+    chroma subsampling while always upgrading to 10-bit. If the source's chroma
+    can't be determined, upgrade to 4:2:2 rather than risk silently downgrading
+    a source that might be 4:2:2 or better — better to use more space than to
+    lose chroma resolution the source actually had.
     """
     if pix_fmt and '444' in pix_fmt:
-        return 'yuv444p10le', ['-profile:v', 'main444-10']
+        return 'main444-10'
     if pix_fmt and '422' in pix_fmt:
-        return 'yuv422p10le', ['-profile:v', 'main422-10']
+        return 'main422-10'
     if pix_fmt and '420' in pix_fmt:
-        return 'yuv420p10le', ['-profile:v', 'main10']
-    return 'yuv422p10le', ['-profile:v', 'main422-10']
-
-
-def is_valid_video(path: Path) -> bool:
-    return path.exists() and path.stat().st_size > 0 and get_duration(path) is not None
+        return 'main10'
+    return 'main422-10'
 
 
 def discover_videos(folder: Path) -> list[Path]:
     return sorted(
         p for p in folder.rglob('*')
         if p.is_file() and p.suffix.lower() in VIDEO_EXTS
-        and not p.name.startswith('.')  # skip our own leftover .*.compressing.tmp* files
     )
 
 
-def cleanup_stale_temp_files(folder: Path) -> None:
-    """Remove .*.compressing.tmp* files left behind by a previous run that got interrupted."""
-    for p in folder.rglob('.*.compressing.tmp*'):
-        if p.is_file():
-            print(f"  Removing stale temp file from an interrupted run: {p.name}")
-            p.unlink(missing_ok=True)
-
-
-def final_path_for(video: Path, input_folder: Path) -> Path:
-    rel = video.relative_to(input_folder).with_suffix('.mp4')
-    return rel
-
-
-def build_jobs(files: list[Path], input_folder: Path, output_folder: Path) -> list[FileJob]:
-    jobs = []
-    for i, video in enumerate(files):
-        final_path = output_folder / final_path_for(video, input_folder)
-        if final_path.exists():
-            print(f"  SKIP (already compressed): {video.name}")
-            continue
-
-        duration = get_duration(video)
-        if duration is None:
-            print(f"  SKIP (unreadable): {video.name}")
-            continue
-
-        jobs.append(FileJob(
-            index=i,
-            path=video,
-            final_path=final_path,
-            duration=duration,
-            pix_fmt=get_pix_fmt(video),
-            timecode=get_timecode(video),
-        ))
-    return jobs
+def final_path_for(video: Path, input_folder: Path, output_folder: Path) -> Path:
+    return output_folder / video.relative_to(input_folder).with_suffix('.mp4')
 
 
 def disk_usage_pct(folder: Path, extra_bytes: int) -> float:
@@ -179,11 +92,11 @@ def disk_usage_pct(folder: Path, extra_bytes: int) -> float:
     return (usage.used + extra_bytes) / usage.total * 100
 
 
-def confirm_disk_space(output_folder: Path, jobs: list[FileJob]) -> None:
+def confirm_disk_space(output_folder: Path, jobs: list[tuple[Path, Path]]) -> None:
     # CRF-based encoding has no predictable target size, so fall back to
     # assuming each output is roughly the size of its source (a conservative
     # over-estimate for archival compression, which should shrink most files).
-    peak_extra = sum(j.path.stat().st_size for j in jobs)
+    peak_extra = sum(source.stat().st_size for source, _ in jobs)
 
     projected = disk_usage_pct(output_folder, peak_extra)
     if projected <= DISK_WARN_PCT:
@@ -197,119 +110,22 @@ def confirm_disk_space(output_folder: Path, jobs: list[FileJob]) -> None:
         sys.exit(1)
 
 
-def _run_with_progress(cmd: list[str], duration_hint: float, pbars: list[tqdm],
-                        lock: threading.Lock) -> tuple[int, str]:
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-
-    stderr_chunks: list[str] = []
-    def _drain_stderr() -> None:
-        for chunk in proc.stderr:
-            stderr_chunks.append(chunk)
-    stderr_thread = threading.Thread(target=_drain_stderr, daemon=True)
-    stderr_thread.start()
-
-    last_frac = 0.0
-    for line in proc.stdout:
-        if not line.startswith('out_time_ms='):
-            continue
-        raw = line.strip().split('=', 1)[1]
-        if raw in ('N/A', ''):
-            continue
-        frac = min(int(raw) / 1_000_000 / duration_hint, 1.0) if duration_hint > 0 else 1.0
-        if frac > last_frac:
-            with lock:
-                for pbar in pbars:
-                    pbar.update(frac - last_frac)
-            last_frac = frac
-
-    proc.wait()
-    stderr_thread.join()
-    with lock:
-        for pbar in pbars:
-            pbar.update(1.0 - last_frac)
-    return proc.returncode, ''.join(stderr_chunks)
-
-
-def encode_file(job: FileJob, tmp_dir: Path, crf: int, preset: str,
-                 pbars: list[tqdm], lock: threading.Lock) -> Path | None:
-    tmp_out = tmp_dir / f"{job.index:04d}.mp4"
-    pix_fmt, profile = pix_fmt_args(job.pix_fmt)
-
-    cmd = [*BACKGROUND_PREFIX, 'ffmpeg', '-y', '-nostdin', '-loglevel', 'error',
-           '-progress', 'pipe:1', '-nostats', '-i', str(job.path),
-           '-c:v', 'libx265', '-pix_fmt', pix_fmt, *profile, '-crf', str(crf), '-preset', preset,
-           '-tag:v', 'hvc1']
-    if job.timecode:
-        cmd += ['-timecode', job.timecode]
-    cmd += ['-c:a', 'copy', str(tmp_out)]
-
-    returncode, stderr = _run_with_progress(cmd, job.duration, pbars, lock)
-
-    if returncode != 0 or not is_valid_video(tmp_out):
-        tqdm.write(f"  ERROR encoding {job.path.name}:\n{stderr.strip()[-500:]}")
-        tmp_out.unlink(missing_ok=True)
-        return None
-    return tmp_out
-
-
-def finalize(job: FileJob, tmp_out: Path | None) -> bool:
-    if tmp_out is None:
-        tqdm.write(f"  FAILED: {job.path.name}")
-        return False
-
-    job.final_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(tmp_out), str(job.final_path))
-
-    size_mb = job.final_path.stat().st_size / 1_048_576
-    tqdm.write(f"  Saved: {job.final_path.name}  ({size_mb:.0f} MB)")
-    return True
-
-
-class FileBarPool:
-    """A fixed set of per-file progress bars, one per concurrently-processing file slot.
-
-    Worker threads are long-lived (a ThreadPoolExecutor reuses them across jobs), so
-    each thread claims one slot the first time it processes a file and keeps it for
-    its lifetime — reset() and set_description() just repoint that same bar at
-    whatever file the thread picks up next.
-    """
-
-    def __init__(self, n: int, base_position: int):
-        bar_format = "  {desc}: {bar}| {percentage:3.0f}% [{elapsed}<{remaining}]"
-        self._bars = [tqdm(total=1, position=base_position + i, leave=False, bar_format=bar_format)
-                      for i in range(n)]
-        self._free = list(range(n))
-        self._lock = threading.Lock()
-        self._local = threading.local()
-
-    def acquire(self, job: 'FileJob') -> tqdm:
-        if not hasattr(self._local, 'slot'):
-            with self._lock:
-                self._local.slot = self._free.pop()
-        bar = self._bars[self._local.slot]
-        bar.reset(total=1)
-        bar.set_description(job.path.name[:40])
-        return bar
-
-    def close(self) -> None:
-        for bar in self._bars:
-            bar.close()
-
-
-def process_file(job: FileJob, tmp_dir: Path, crf: int, preset: str,
-                  overall_pbar: tqdm, file_bars: FileBarPool, lock: threading.Lock) -> bool:
-    file_pbar = file_bars.acquire(job)
-    tmp_out = encode_file(job, tmp_dir, crf, preset, [overall_pbar, file_pbar], lock)
-    return finalize(job, tmp_out)
+def compress(source: Path, dest: Path, crf: int, preset: str) -> bool:
+    cmd = ['HandBrakeCLI', '-i', str(source), '-o', str(dest),
+           '-f', 'av_mp4', '-e', 'x265_10bit',
+           '--encoder-preset', preset, '--encoder-profile', profile_for(get_pix_fmt(source)),
+           '-q', str(crf), '--color-range', 'full', '-E', 'copy', '--crop-mode', 'none']
+    result = subprocess.run(cmd)
+    return result.returncode == 0 and dest.exists() and dest.stat().st_size > 0
 
 
 def run(input_folder: Path, output_folder: Path, crf: int, preset: str) -> None:
-    if not shutil.which('ffmpeg') or not shutil.which('ffprobe'):
-        print("ffmpeg/ffprobe not found on PATH. Install with: brew install ffmpeg")
+    if not shutil.which('HandBrakeCLI'):
+        print("HandBrakeCLI not found on PATH. Install with: brew install handbrake")
         sys.exit(1)
-
-    if output_folder.exists():
-        cleanup_stale_temp_files(output_folder)
+    if not shutil.which('ffprobe'):
+        print("ffprobe not found on PATH. Install with: brew install ffmpeg")
+        sys.exit(1)
 
     output_folder.mkdir(parents=True, exist_ok=True)
 
@@ -318,39 +134,32 @@ def run(input_folder: Path, output_folder: Path, crf: int, preset: str) -> None:
     if not files:
         sys.exit(0)
 
-    jobs = build_jobs(files, input_folder, output_folder)
+    jobs = []
+    for video in files:
+        final_path = final_path_for(video, input_folder, output_folder)
+        if final_path.exists():
+            print(f"SKIP (already compressed): {video.name}")
+            continue
+        jobs.append((video, final_path))
+
     if not jobs:
         print("\nNothing to do.")
         sys.exit(0)
 
-    # Smallest files first, so quick wins land early instead of queuing behind
-    # whatever huge file happened to sort alphabetically first.
-    jobs.sort(key=lambda j: j.path.stat().st_size)
-
     confirm_disk_space(output_folder, jobs)
 
-    print(f"Encoder: libx265 (crf {crf}, preset {preset})")
-    print(f"{len(jobs)} file(s) to compress\n")
-
     succeeded = failed = 0
-    lock = threading.Lock()
-    with tempfile.TemporaryDirectory(prefix='.compress_videos_', dir=output_folder) as tmp_dir_str:
-        tmp_dir = Path(tmp_dir_str)
-        bar_format = "{l_bar}{bar}| {n:.1f}/{total} [{elapsed}<{remaining}, {rate_fmt}{postfix}]"
-        with tqdm(total=len(jobs), desc="Total", unit="file", position=0, bar_format=bar_format) as pbar:
-            n_slots = min(WORKERS, len(jobs))
-            file_bars = FileBarPool(n_slots, base_position=1)
-            try:
-                with ThreadPoolExecutor(max_workers=n_slots) as pool:
-                    futures = [pool.submit(process_file, job, tmp_dir, crf, preset, pbar, file_bars, lock)
-                               for job in jobs]
-                    for future in as_completed(futures):
-                        if future.result():
-                            succeeded += 1
-                        else:
-                            failed += 1
-            finally:
-                file_bars.close()
+    for source, final_path in jobs:
+        final_path.parent.mkdir(parents=True, exist_ok=True)
+        print(f"=== {source.name} ===")
+        if compress(source, final_path, crf, preset):
+            size_mb = final_path.stat().st_size / 1_048_576
+            print(f"  Saved: {final_path.name}  ({size_mb:.0f} MB)")
+            succeeded += 1
+        else:
+            print(f"  FAILED: {source.name}")
+            final_path.unlink(missing_ok=True)
+            failed += 1
 
     print(f"\nDone: {succeeded} compressed, {failed} failed.")
     if failed:
@@ -365,10 +174,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help='Folder to write compressed videos into, mirroring the input\'s '
                              'subfolder structure (always as .mp4). Created if it doesn\'t exist.')
     parser.add_argument('--crf', type=int, default=DEFAULT_CRF,
-                        help=f'x265 constant-rate-factor quality level, lower is higher quality '
-                             f'and larger files (default: {DEFAULT_CRF})')
+                        help=f'HandBrake constant-quality value for -q; lower is higher quality '
+                             f'(default: {DEFAULT_CRF})')
     parser.add_argument('--preset', default=DEFAULT_PRESET,
-                        help=f'x265 encoding preset, trading encode time for compression '
+                        help=f'HandBrake encoder preset, trading encode time for compression '
                              f'efficiency (default: {DEFAULT_PRESET})')
     return parser
 
