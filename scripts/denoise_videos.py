@@ -18,14 +18,16 @@ Files are processed one at a time, in chronological order of file creation
 date — no progress bar of our own; HandBrakeCLI already prints live
 "Encoding: ..." and "Muxing: ..." lines.
 
-Usage: python3 denoise_videos.py <folder-or-file> [output_folder-or-file] [--quality Q] [--overwrite]
+Usage: python3 denoise_videos.py <folder-or-file> [output_folder-or-file] [--quality Q] [--overwrite] [--force]
 
 When scanning a folder, files that already carry a container-level "encoder"
 tag are skipped as already processed — Canon cameras (both the R line and the
 Cinema line) leave this tag unset on their originals, while ffmpeg, HandBrake,
 and DaVinci Resolve all stamp one in when they write a file. This mainly
 matters for --overwrite, where a processed file keeps its original name and
-so can't be recognised by a _denoised suffix.
+so can't be recognised by a _denoised suffix. Pass --force to denoise
+everything regardless, bypassing both this check and the "output already
+exists" check.
 
 Requires HandBrakeCLI and ffprobe (part of ffmpeg) on PATH
 (brew install handbrake ffmpeg).
@@ -116,7 +118,7 @@ def process(source: Path, final_path: Path, quality: float, overwrite: bool) -> 
     return True
 
 
-def run(input_path: Path, output: Path | None, quality: float, overwrite: bool) -> None:
+def run(input_path: Path, output: Path | None, quality: float, overwrite: bool, force: bool) -> None:
     if not shutil.which('HandBrakeCLI'):
         print("HandBrakeCLI not found on PATH. Install with: brew install handbrake")
         sys.exit(1)
@@ -138,11 +140,11 @@ def run(input_path: Path, output: Path | None, quality: float, overwrite: bool) 
 
     succeeded = failed = skipped = 0
     for source, final_path, check_processed in jobs:
-        if not overwrite and final_path.exists():
+        if not force and not overwrite and final_path.exists():
             print(f"SKIP (already denoised): {source.name}")
             skipped += 1
             continue
-        if check_processed and already_processed(source):
+        if not force and check_processed and already_processed(source):
             print(f"SKIP (already processed — has encoder tag): {source.name}")
             skipped += 1
             continue
@@ -173,6 +175,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument('--overwrite', action='store_true',
                         help='Replace each source file in place instead of writing a '
                              '_denoised copy alongside it. Cannot be combined with an output folder/file.')
+    parser.add_argument('--force', action='store_true',
+                        help='Denoise every matching file even if it looks already done — '
+                             'skips both the "output already exists" check and the '
+                             '"already has an encoder tag" check.')
     return parser
 
 
@@ -193,7 +199,7 @@ def main() -> None:
         parser.error(f"argument output: {output} is a directory, but input is a single file — "
                       "pass the exact output file path instead")
 
-    run(input_path, output, args.quality, args.overwrite)
+    run(input_path, output, args.quality, args.overwrite, args.force)
 
 
 if __name__ == '__main__':

@@ -165,7 +165,7 @@ cd backend && uv run python ../scripts/stitch_gopro.py /path/to/gopro/folder [ou
 `scripts/denoise_videos.py` denoises a single video, or recursively finds and denoises every video in a folder, via HandBrakeCLI (`hqdn3d` filter, x265_10bit encoder) — settings from a manual HandBrake CLI run that worked much better than an earlier ffmpeg-based version of this script. Files are processed one at a time, in chronological order of file creation date; HandBrakeCLI prints its own live progress.
 
 ```bash
-cd backend && uv run python ../scripts/denoise_videos.py /path/to/folder-or-file [output_folder_or_file] [--quality Q] [--overwrite]
+cd backend && uv run python ../scripts/denoise_videos.py /path/to/folder-or-file [output_folder_or_file] [--quality Q] [--overwrite] [--force]
 ```
 
 - By default, writes a `<name>_denoised<ext>` copy alongside each source file (originals untouched)
@@ -173,6 +173,7 @@ cd backend && uv run python ../scripts/denoise_videos.py /path/to/folder-or-file
 - **`--quality`** — HandBrake constant-quality value passed to `-q`; lower is higher quality (default: 16.0)
 - **`--overwrite`** — replace each source file in place instead of writing a separate copy. True in-place transcoding isn't possible, so this still encodes to a temp file first and swaps it in once it succeeds
 - When scanning a folder, files that already carry a container-level `encoder` tag are skipped as already processed — Canon cameras (R line and Cinema line) leave this unset on their originals, while ffmpeg, HandBrake, and DaVinci Resolve all stamp one in
+- **`--force`** — denoise every matching file regardless, bypassing both the "output already exists" and the "already has an encoder tag" checks
 - Requires `HandBrakeCLI` and `ffprobe` (part of ffmpeg) on PATH (`brew install handbrake ffmpeg`)
 
 ---
