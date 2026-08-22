@@ -38,12 +38,11 @@ Requires HandBrakeCLI and ffprobe (part of ffmpeg) on PATH
 
 import argparse
 import re
-import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-VIDEO_EXTS = {'.mp4', '.mov', '.m4v', '.avi', '.mkv', '.mts', '.m2ts', '.wmv', '.flv', '.webm'}
+from video_common import VIDEO_EXTS, already_processed, require_tools, swap_in
 
 _GOPRO_PATTERNS = [
     re.compile(r'^G[HXS]\d{2}\d{4}\.mp4$', re.IGNORECASE),
@@ -78,14 +77,6 @@ def discover_videos(folder: Path) -> list[Path]:
         if p.is_file() and p.suffix.lower() in VIDEO_EXTS and not p.stem.endswith('_denoised')
     ]
     return sorted(files, key=creation_time)
-
-
-def already_processed(path: Path) -> bool:
-    result = subprocess.run(
-        ['ffprobe', '-v', 'error', '-show_entries', 'format_tags=encoder',
-         '-of', 'default=noprint_wrappers=1:nokey=1', str(path)],
-        capture_output=True, text=True)
-    return bool(result.stdout.strip())
 
 
 def output_ext(source_ext: str) -> str:
@@ -129,9 +120,7 @@ def process(source: Path, final_path: Path, quality: float, overwrite: bool) -> 
         return False
 
     if overwrite:
-        working_path.replace(final_path)
-        if final_path != source:
-            source.unlink(missing_ok=True)
+        swap_in(working_path, final_path, source)
 
     size_mb = final_path.stat().st_size / 1_048_576
     print(f"  Saved: {final_path.name}  ({size_mb:.0f} MB)")
@@ -139,12 +128,7 @@ def process(source: Path, final_path: Path, quality: float, overwrite: bool) -> 
 
 
 def run(input_path: Path, output: Path | None, quality: float, overwrite: bool, force: bool) -> None:
-    if not shutil.which('HandBrakeCLI'):
-        print("HandBrakeCLI not found on PATH. Install with: brew install handbrake")
-        sys.exit(1)
-    if not shutil.which('ffprobe'):
-        print("ffprobe not found on PATH. Install with: brew install ffmpeg")
-        sys.exit(1)
+    require_tools()
 
     # Only skip already-processed files when scanning a folder — a single
     # file passed explicitly is denoised regardless of its encoder tag.

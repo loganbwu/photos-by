@@ -60,7 +60,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VIDEO_EXTS = {'.mp4', '.mov', '.m4v', '.avi', '.mkv', '.mts', '.m2ts', '.wmv', '.flv', '.webm'}
+from video_common import VIDEO_EXTS, already_processed, require_tools, swap_in
 
 DISK_WARN_PCT = 90
 DEFAULT_CRF = 20
@@ -98,14 +98,6 @@ def discover_videos(folder: Path) -> list[Path]:
     )
 
 
-def already_processed(path: Path) -> bool:
-    result = subprocess.run(
-        ['ffprobe', '-v', 'error', '-show_entries', 'format_tags=encoder',
-         '-of', 'default=noprint_wrappers=1:nokey=1', str(path)],
-        capture_output=True, text=True)
-    return bool(result.stdout.strip())
-
-
 def default_output_for(input_path: Path) -> Path:
     if input_path.is_dir():
         return input_path.parent / f"{input_path.name}_compressed"
@@ -114,7 +106,13 @@ def default_output_for(input_path: Path) -> Path:
 
 def final_path_for(video: Path, input_folder: Path, output_folder: Path, overwrite: bool) -> Path:
     if overwrite:
-        return video.with_suffix('.mp4')
+        # If the source is already an .mp4 (any case), keep its path untouched rather
+        # than forcing the extension to lowercase: on a case-insensitive filesystem
+        # (the macOS default) video.with_suffix('.mp4') on e.g. GX016273.MP4 produces
+        # a Path that's textually different from the source but refers to the same
+        # file on disk — process() then sees final_path != source and deletes what it
+        # thinks is a leftover original, destroying the just-written output instead.
+        return video if video.suffix.lower() == '.mp4' else video.with_suffix('.mp4')
     return output_folder / video.relative_to(input_folder).with_suffix('.mp4')
 
 
@@ -163,9 +161,7 @@ def process(source: Path, final_path: Path, crf: int, preset: str, overwrite: bo
         return False
 
     if overwrite:
-        working_path.replace(final_path)
-        if final_path != source:
-            source.unlink(missing_ok=True)
+        swap_in(working_path, final_path, source)
 
     size_mb = final_path.stat().st_size / 1_048_576
     print(f"  Saved: {final_path.name}  ({size_mb:.0f} MB)")
@@ -174,12 +170,7 @@ def process(source: Path, final_path: Path, crf: int, preset: str, overwrite: bo
 
 def run(input_path: Path, output: Path | None, crf: int, preset: str,
         overwrite: bool, force: bool) -> None:
-    if not shutil.which('HandBrakeCLI'):
-        print("HandBrakeCLI not found on PATH. Install with: brew install handbrake")
-        sys.exit(1)
-    if not shutil.which('ffprobe'):
-        print("ffprobe not found on PATH. Install with: brew install ffmpeg")
-        sys.exit(1)
+    require_tools()
 
     # Only skip already-processed files when scanning a folder — a single
     # file passed explicitly is compressed regardless of its encoder tag.
