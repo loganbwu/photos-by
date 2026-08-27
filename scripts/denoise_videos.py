@@ -62,7 +62,7 @@ def is_gopro(path: Path) -> bool:
 FORMAT_BY_EXT = {'.mp4': 'av_mp4', '.m4v': 'av_mp4', '.mov': 'av_mov',
                   '.mkv': 'av_mkv', '.webm': 'av_webm'}
 
-HQDN3D = 'y-spatial=4:cb-spatial=3:cr-spatial=3:y-temporal=3:cb-temporal=2:cr-temporal=2'
+HQDN3D = 'y-spatial=4:cb-spatial=3:cr-spatial=3:y-temporal=0:cb-temporal=0:cr-temporal=0'
 QUALITY_DEFAULT = 16.0
 
 
