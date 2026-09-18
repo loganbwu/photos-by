@@ -46,8 +46,3 @@ Instagram handles of the media team:\
 <a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a> (feel free to tag me)\
 <a href="https://instagram.com/agathe.white" target="_blank">@agathe.white</a>\
 <a href="https://instagram.com/gillybeanbag" target="_blank">@gillybeanbag</a>
-
-## Order form
-
-<iframe src="https://docs.google.com/forms/d/e/1FAIpQLSe7Fj4C-TMVkYKIzu1diAltbf26eAPCu-_aALzIqiWSu6r_LQ/viewform?embedded=true" width="100%" height="2600" frameborder="0" marginheight="0" marginwidth="0">Loading…</iframe>
-
