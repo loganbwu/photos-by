@@ -6,7 +6,7 @@ Thank you for competing in Steel the Spotlight!
 
 Non-performance media (venue, prizegiving, etc) can be viewed <a href="https://photosby.loganwu.co.nz/albums/?album=00_miscellaneous_kjsts" target="_blank"><b>here</b></a>.
 
-Please download these free of charge <a href="https://drive.google.com/drive/folders/1ZEqfamxrvL2FB7KCNzIE0GydpHdj5YaP?usp=drive_link" target="_blank"><b>here</b></a>. If you pass these on (e.g. to your studio), please let them know to tag me on Instagram for attribution.
+Please download these free of charge <a href="https://drive.google.com/drive/folders/1ZEqfamxrvL2FB7KCNzIE0GydpHdj5YaP?usp=drive_link" target="_blank"><b>here</b></a>.
 
 ## How to order performance media
 
@@ -43,6 +43,6 @@ Did you enjoy your media? If I shoot for an event organiser based on your referr
 Thank you to my team for their support! I love being tagged on Instagram, and you can also tag my team members.
 
 Instagram handles of the media team:\
-<a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a> (feel free to tag me)\
+<a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a>\
 <a href="https://instagram.com/agathe.white" target="_blank">@agathe.white</a>\
 <a href="https://instagram.com/gillybeanbag" target="_blank">@gillybeanbag</a>
