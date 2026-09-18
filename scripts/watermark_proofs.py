@@ -18,13 +18,13 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
 IMAGE_EXTS = {'.jpg', '.jpeg', '.tif', '.tiff', '.png'}
 FONT_PATH = Path.home() / 'Library/Fonts/Oswald-VariableFont_wght.ttf'
 FONT_WEIGHT = 'Light'
-WATERMARK_TEXT = 'FOR PREVIEW ONLY\nNOT FOR DISTRIBUTION\n© PHOTOS BY LOGAN'
+WATERMARK_TEXT = 'FOR PREVIEW ONLY\nDO NOT SHARE OR SCREENSHOT\n© PHOTOS BY LOGAN'
 
 TARGET_MEGAPIXELS = 3_000_000
 JPEG_QUALITY = 75
 WATERMARK_OPACITY = 0.10       # white text
-SHADOW_OPACITY = 0.45          # black shadow, kept stronger so the faint text stays legible
-MAX_TEXT_WIDTH_FRAC = 0.9      # widest line should span at most this fraction of image width
+SHADOW_OPACITY = 0.8          # black shadow, kept stronger so the faint text stays legible
+MAX_TEXT_WIDTH_FRAC = 0.95      # widest line should span at most this fraction of image width
 
 
 def load_font(size: int) -> ImageFont.FreeTypeFont:
