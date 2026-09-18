@@ -4,9 +4,7 @@ Thank you for competing in Steel the Spotlight!
 
 ## Miscellaneous media
 
-Non-performance media (venue, prizegiving, etc) can be viewed <a href="https://photosby.loganwu.co.nz/albums/?album=00_miscellaneous_kjsts" target="_blank"><b>here</b></a>.
-
-Please download these free of charge <a href="https://drive.google.com/drive/folders/1ZEqfamxrvL2FB7KCNzIE0GydpHdj5YaP?usp=drive_link" target="_blank"><b>here</b></a>.
+Non-performance media (venue, prizegiving, etc) can be viewed <a href="https://photosby.loganwu.co.nz/albums/?album=00_miscellaneous_kjsts" target="_blank"><b>here</b></a> and downloaded free of charge <a href="https://drive.google.com/drive/folders/1ZEqfamxrvL2FB7KCNzIE0GydpHdj5YaP?usp=drive_link" target="_blank"><b>here</b></a>.
 
 ## How to order performance media
 
