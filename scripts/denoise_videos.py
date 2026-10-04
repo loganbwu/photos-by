@@ -13,9 +13,10 @@ file is skipped if its corresponding output already exists. With --overwrite
 in place instead: encoded to a temp file next to it first, then swapped in
 once the encode succeeds.
 
-Files are processed one at a time, in chronological order of file creation
-date — no progress bar of our own; HandBrakeCLI already prints live
-"Encoding: ..." and "Muxing: ..." lines.
+Files are processed one at a time, smallest first. HandBrakeCLI's own
+per-scan/per-title logging is suppressed; only its live "Encoding: ..."
+progress line is shown (updated in place), preceded by the name of the file
+currently being encoded.
 
 Usage: python3 denoise_videos.py <folder-or-file> [output_folder-or-file] [--quality Q] [--overwrite] [--force]
 
@@ -66,17 +67,12 @@ HQDN3D = 'y-spatial=4:cb-spatial=3:cr-spatial=3:y-temporal=0:cb-temporal=0:cr-te
 QUALITY_DEFAULT = 16.0
 
 
-def creation_time(path: Path) -> float:
-    stat = path.stat()
-    return getattr(stat, 'st_birthtime', stat.st_ctime)
-
-
 def discover_videos(folder: Path) -> list[Path]:
     files = [
         p for p in folder.rglob('*')
         if p.is_file() and p.suffix.lower() in VIDEO_EXTS and not p.stem.endswith('_denoised')
     ]
-    return sorted(files, key=creation_time)
+    return sorted(files, key=lambda p: p.stat().st_size)
 
 
 def output_ext(source_ext: str) -> str:
@@ -103,8 +99,26 @@ def denoise(source: Path, dest: Path, quality: float) -> bool:
            f'--hqdn3d={HQDN3D}',
            '-e', 'x265_10bit', '--encoder-preset', 'slow', '--encoder-profile', 'main422-10',
            '-q', str(quality), '--color-range', 'full', '-E', 'copy', '--crop-mode', 'none']
-    result = subprocess.run(cmd)
-    return result.returncode == 0 and dest.exists() and dest.stat().st_size > 0
+
+    # HandBrakeCLI's own scan/title logging is noisy; only its live "Encoding: ..."
+    # progress line is worth showing, updated in place rather than one line per tick.
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             text=True, bufsize=1)
+    log = []
+    showed_progress = False
+    for line in proc.stdout:
+        log.append(line)
+        if line.startswith('Encoding:'):
+            print(f"\r  {line.rstrip()}", end='', flush=True)
+            showed_progress = True
+    proc.wait()
+    if showed_progress:
+        print()
+
+    ok = proc.returncode == 0 and dest.exists() and dest.stat().st_size > 0
+    if not ok:
+        print(''.join(log))
+    return ok
 
 
 def process(source: Path, final_path: Path, quality: float, overwrite: bool) -> bool:
@@ -141,7 +155,11 @@ def run(input_path: Path, output: Path | None, quality: float, overwrite: bool, 
         if not overwrite:
             output.mkdir(parents=True, exist_ok=True)
         files = discover_videos(input_path)
-        print(f"Found {len(files)} video file(s) in {input_path}\n")
+        print(f"Found {len(files)} video file(s) in {input_path} (processing order, smallest first):")
+        for i, f in enumerate(files, 1):
+            size_mb = f.stat().st_size / 1_048_576
+            print(f"  {i}. {f.name}  ({size_mb:.0f} MB)")
+        print()
         jobs = [(f, final_path_for(f, input_path, output, overwrite), True) for f in files]
 
     succeeded = failed = skipped = 0
