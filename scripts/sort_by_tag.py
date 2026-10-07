@@ -2,8 +2,11 @@
 r"""Move exported Lightroom photos into subfolders by tag.
 
 Tags matching ^\d{2,}_ (two or more digits, e.g. 01_ or 001_) are treated as
-folder names. Photos with exactly one such tag are moved; photos with zero
-or more than one are skipped.
+folder names. Tags come from IPTC keywords (JPEG/TIFF only) and from the file
+name itself: a file whose name, excluding extension, matches the pattern
+(e.g. 01_selects.mp4) is tagged with that name. This allows sorting files that
+cannot carry keywords, such as videos. Files with exactly one distinct tag are
+moved; files with zero or more than one are skipped.
 
 Usage: python3 sort_by_tag.py <folder>
 """
@@ -33,6 +36,14 @@ def get_tagged_keywords(path: Path) -> list[str]:
         return []
 
 
+def get_tags(path: Path) -> list[str]:
+    keywords = get_tagged_keywords(path) if path.suffix.lower() in IMAGE_EXTS else []
+    tags = {k for k in keywords if TAG_PATTERN.match(k)}
+    if TAG_PATTERN.match(path.stem):
+        tags.add(path.stem)
+    return sorted(tags)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -48,14 +59,15 @@ def main():
         print(f"Folder does not exist: {folder}")
         sys.exit(1)
 
-    files = sorted(p for p in folder.iterdir() if p.suffix.lower() in IMAGE_EXTS)
-    print(f"Found {len(files)} image(s) in {folder}\n")
+    files = sorted(p for p in folder.iterdir()
+                   if p.is_file() and not p.name.startswith('.')
+                   and (p.suffix.lower() in IMAGE_EXTS or TAG_PATTERN.match(p.stem)))
+    print(f"Found {len(files)} file(s) in {folder}\n")
 
     moved = skipped_none = skipped_multi = 0
 
     for photo in files:
-        keywords = get_tagged_keywords(photo)
-        matching = [k for k in keywords if TAG_PATTERN.match(k)]
+        matching = get_tags(photo)
 
         if len(matching) == 0:
             print(f"  Skip (no tag):      {photo.name}")

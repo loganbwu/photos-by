@@ -212,7 +212,7 @@ cd backend && uv run python ../scripts/make_slideshow.py /path/to/photos [output
 
 ### Publishing a New Private Gallery
 
-> **Pre-processing:** If you have a flat folder of Lightroom exports tagged with `NN_` keywords (e.g. `01_selects`, `02_edits`), `scripts/sort_by_tag.py` moves each image into a subfolder named after its tag. Photos with no matching tag or with multiple tags are skipped.
+> **Pre-processing:** If you have a flat folder of Lightroom exports tagged with `NN_` keywords (e.g. `01_selects`, `02_edits`), `scripts/sort_by_tag.py` moves each image into a subfolder named after its tag. A file whose name (excluding extension) matches the tag format, e.g. `01_selects.mp4`, is also treated as having that tag, so videos and other files without keyword support can be sorted too. Files with no matching tag or with multiple distinct tags are skipped.
 > ```bash
 > cd backend && uv run python ../scripts/sort_by_tag.py /path/to/lightroom/export
 > ```
