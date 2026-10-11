@@ -25,6 +25,48 @@ def already_processed(path: Path) -> bool:
     return bool(result.stdout.strip())
 
 
+def discover_videos(folder: Path, exclude_suffix: str | None = None) -> list[Path]:
+    """Recursively find video files under folder, smallest first."""
+    files = [
+        p for p in folder.rglob('*')
+        if p.is_file() and p.suffix.lower() in VIDEO_EXTS
+        and not (exclude_suffix and p.stem.endswith(exclude_suffix))
+    ]
+    return sorted(files, key=lambda p: p.stat().st_size)
+
+
+def print_file_list(files: list[Path], folder: Path) -> None:
+    print(f"Found {len(files)} video file(s) in {folder} (processing order, smallest first):")
+    for i, f in enumerate(files, 1):
+        size_mb = f.stat().st_size / 1_048_576
+        print(f"  {i}. {f.name}  ({size_mb:.0f} MB)")
+    print()
+
+
+def run_handbrake(cmd: list[str], dest: Path) -> bool:
+    """Run a HandBrakeCLI command, showing only its live "Encoding: ..." progress
+    line (updated in place). Its scan/title logging is noisy, so it's captured
+    and only printed if the encode fails.
+    """
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                             text=True, bufsize=1)
+    log = []
+    showed_progress = False
+    for line in proc.stdout:
+        log.append(line)
+        if line.startswith('Encoding:'):
+            print(f"\r  {line.rstrip()}", end='', flush=True)
+            showed_progress = True
+    proc.wait()
+    if showed_progress:
+        print()
+
+    ok = proc.returncode == 0 and dest.exists() and dest.stat().st_size > 0
+    if not ok:
+        print(''.join(log))
+    return ok
+
+
 def swap_in(working_path: Path, final_path: Path, source: Path) -> None:
     """Replace final_path with working_path, then remove source — unless source
     and final_path are the same file on disk. Checked via the filesystem

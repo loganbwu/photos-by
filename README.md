@@ -162,7 +162,7 @@ cd backend && uv run python ../scripts/stitch_gopro.py /path/to/gopro/folder [ou
 
 ### Denoising Video Footage
 
-`scripts/denoise_videos.py` denoises a single video, or recursively finds and denoises every video in a folder, via HandBrakeCLI (`hqdn3d` filter, x265_10bit encoder) — settings from a manual HandBrake CLI run that worked much better than an earlier ffmpeg-based version of this script. Files are processed one at a time, in chronological order of file creation date; HandBrakeCLI prints its own live progress.
+`scripts/denoise_videos.py` denoises a single video, or recursively finds and denoises every video in a folder, via HandBrakeCLI (`hqdn3d` filter, x265_10bit encoder) — settings from a manual HandBrake CLI run that worked much better than an earlier ffmpeg-based version of this script. Files are processed one at a time, smallest first. Only HandBrakeCLI's live "Encoding: ..." progress line is shown; its full log is printed only if an encode fails.
 
 ```bash
 cd backend && uv run python ../scripts/denoise_videos.py /path/to/folder-or-file [output_folder_or_file] [--quality Q] [--overwrite] [--force]
@@ -180,19 +180,20 @@ cd backend && uv run python ../scripts/denoise_videos.py /path/to/folder-or-file
 
 ### Compressing Video Footage for Archival
 
-`scripts/compress_videos.py` recursively finds every video in a folder and re-encodes it with libx265 (CRF-based, always 10-bit, chroma subsampling matched to the source — never silently downgraded — with `hvc1` tag) to shrink storage footprint while keeping the result readable by DaVinci Resolve/QuickTime/Final Cut. Audio is stream-copied (no re-encode, no A/V drift) and the source's timecode track, if any, is preserved so the clip still lines up on Resolve's timeline. An overall progress bar (files completed + ETA) tracks the whole batch, plus one progress bar per file currently being encoded.
+`scripts/compress_videos.py` compresses a single video, or recursively every video in a folder, via HandBrakeCLI (x265_10bit encoder, the same settings as `denoise_videos.py` minus the `hqdn3d` filter) to shrink storage footprint while keeping the result editable in DaVinci Resolve. Quality-based (`-q`), always 10-bit, with chroma subsampling matched to the source (never silently downgraded). Audio is passed through. Files are processed one at a time, smallest first. Only HandBrakeCLI's live "Encoding: ..." progress line is shown; its full log is printed only if an encode fails.
 
 ```bash
-cd backend && uv run python ../scripts/compress_videos.py /path/to/folder /path/to/output_folder [--crf N] [--preset NAME]
+cd backend && uv run python ../scripts/compress_videos.py /path/to/folder-or-file [output_folder_or_file] [--crf N] [--preset NAME] [--overwrite] [--force]
 ```
 
-- Both `input_folder` and `output_folder` are required — originals are never modified or deleted
-- Output always mirrors the input's subfolder structure and is always written as `.mp4` (needed for the `hvc1` tag)
+- By default, a folder is compressed into a sibling `<input>_compressed` folder (mirroring subfolders); a single file is written alongside itself as `<name>_compress.mp4`. Output is always `.mp4`
 - A file is skipped if its corresponding output already exists
-- **`--crf`** — x265 quality level, lower is higher quality and larger files (default: 20)
+- **`--crf`** — HandBrake constant-quality value passed to `-q`; lower is higher quality and larger files (default: 20)
 - **`--preset`** — x265 speed/efficiency tradeoff (default: `slow`)
+- **`--overwrite`** — replace each source file in place (encodes to a temp file first, then swaps it in). Cannot be combined with an output argument
+- When scanning a folder, files that already carry a container-level `encoder` tag are skipped as already processed; **`--force`** bypasses this and the "output already exists" check
 - If the run looks likely to push disk usage past 90%, you'll be warned and prompted to confirm
-- Requires `ffmpeg` on PATH (`brew install ffmpeg`)
+- Requires `HandBrakeCLI` and `ffprobe` (part of ffmpeg) on PATH (`brew install handbrake ffmpeg`)
 
 ---
 

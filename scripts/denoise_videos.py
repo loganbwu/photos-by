@@ -39,11 +39,11 @@ Requires HandBrakeCLI and ffprobe (part of ffmpeg) on PATH
 
 import argparse
 import re
-import subprocess
 import sys
 from pathlib import Path
 
-from video_common import VIDEO_EXTS, already_processed, require_tools, swap_in
+from video_common import (already_processed, discover_videos, print_file_list,
+                          require_tools, run_handbrake, swap_in)
 
 _GOPRO_PATTERNS = [
     re.compile(r'^G[HXS]\d{2}\d{4}\.mp4$', re.IGNORECASE),
@@ -65,14 +65,6 @@ FORMAT_BY_EXT = {'.mp4': 'av_mp4', '.m4v': 'av_mp4', '.mov': 'av_mov',
 
 HQDN3D = 'y-spatial=4:cb-spatial=3:cr-spatial=3:y-temporal=6:cb-temporal=4.5:cr-temporal=4.5'
 QUALITY_DEFAULT = 16.0
-
-
-def discover_videos(folder: Path) -> list[Path]:
-    files = [
-        p for p in folder.rglob('*')
-        if p.is_file() and p.suffix.lower() in VIDEO_EXTS and not p.stem.endswith('_denoised')
-    ]
-    return sorted(files, key=lambda p: p.stat().st_size)
 
 
 def output_ext(source_ext: str) -> str:
@@ -99,26 +91,7 @@ def denoise(source: Path, dest: Path, quality: float) -> bool:
            f'--hqdn3d={HQDN3D}',
            '-e', 'x265_10bit', '--encoder-preset', 'slow', '--encoder-profile', 'main422-10',
            '-q', str(quality), '--color-range', 'full', '-E', 'copy', '--crop-mode', 'none']
-
-    # HandBrakeCLI's own scan/title logging is noisy; only its live "Encoding: ..."
-    # progress line is worth showing, updated in place rather than one line per tick.
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                             text=True, bufsize=1)
-    log = []
-    showed_progress = False
-    for line in proc.stdout:
-        log.append(line)
-        if line.startswith('Encoding:'):
-            print(f"\r  {line.rstrip()}", end='', flush=True)
-            showed_progress = True
-    proc.wait()
-    if showed_progress:
-        print()
-
-    ok = proc.returncode == 0 and dest.exists() and dest.stat().st_size > 0
-    if not ok:
-        print(''.join(log))
-    return ok
+    return run_handbrake(cmd, dest)
 
 
 def process(source: Path, final_path: Path, quality: float, overwrite: bool) -> bool:
@@ -154,12 +127,8 @@ def run(input_path: Path, output: Path | None, quality: float, overwrite: bool, 
     else:
         if not overwrite:
             output.mkdir(parents=True, exist_ok=True)
-        files = discover_videos(input_path)
-        print(f"Found {len(files)} video file(s) in {input_path} (processing order, smallest first):")
-        for i, f in enumerate(files, 1):
-            size_mb = f.stat().st_size / 1_048_576
-            print(f"  {i}. {f.name}  ({size_mb:.0f} MB)")
-        print()
+        files = discover_videos(input_path, exclude_suffix='_denoised')
+        print_file_list(files, input_path)
         jobs = [(f, final_path_for(f, input_path, output, overwrite), True) for f in files]
 
     succeeded = failed = skipped = 0

@@ -30,11 +30,13 @@ with an output argument), each source file is replaced in place instead:
 encoded to a temp file next to it first, then swapped in once the encode
 succeeds.
 
-Files are processed one at a time, in the order they're discovered — no
-progress bar of our own; HandBrakeCLI already prints live "Encoding: ..." and
-"Muxing: ..." lines. Running multiple HandBrakeCLI jobs at once was tried and
-dropped: a single --encoder-preset slow x265 job already saturates every core,
-so concurrency only added contention, not throughput.
+Files are processed one at a time, smallest first. HandBrakeCLI's own
+per-scan/per-title logging is suppressed (and only printed if an encode
+fails); only its live "Encoding: ..." progress line is shown (updated in
+place), preceded by the name of the file currently being encoded. Running
+multiple HandBrakeCLI jobs at once was tried and dropped: a single
+--encoder-preset slow x265 job already saturates every core, so concurrency
+only added contention, not throughput.
 
 When scanning a folder, files that already carry a container-level "encoder"
 tag are skipped as already processed — Canon cameras (both the R line and the
@@ -60,7 +62,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from video_common import VIDEO_EXTS, already_processed, require_tools, swap_in
+from video_common import (already_processed, discover_videos, print_file_list,
+                          require_tools, run_handbrake, swap_in)
 
 DISK_WARN_PCT = 90
 DEFAULT_CRF = 20
@@ -89,13 +92,6 @@ def profile_for(pix_fmt: str | None) -> str:
     if pix_fmt and '420' in pix_fmt:
         return 'main10'
     return 'main422-10'
-
-
-def discover_videos(folder: Path) -> list[Path]:
-    return sorted(
-        p for p in folder.rglob('*')
-        if p.is_file() and p.suffix.lower() in VIDEO_EXTS
-    )
 
 
 def default_output_for(input_path: Path) -> Path:
@@ -144,8 +140,7 @@ def compress(source: Path, dest: Path, crf: int, preset: str) -> bool:
            '-f', 'av_mp4', '-e', 'x265_10bit',
            '--encoder-preset', preset, '--encoder-profile', profile_for(get_pix_fmt(source)),
            '-q', str(crf), '--color-range', 'full', '-E', 'copy', '--crop-mode', 'none']
-    result = subprocess.run(cmd)
-    return result.returncode == 0 and dest.exists() and dest.stat().st_size > 0
+    return run_handbrake(cmd, dest)
 
 
 def process(source: Path, final_path: Path, crf: int, preset: str, overwrite: bool) -> bool:
@@ -183,7 +178,7 @@ def run(input_path: Path, output: Path | None, crf: int, preset: str,
         if not overwrite:
             output.mkdir(parents=True, exist_ok=True)
         files = discover_videos(input_path)
-        print(f"Found {len(files)} video file(s) in {input_path}\n")
+        print_file_list(files, input_path)
         jobs_all = [(f, final_path_for(f, input_path, output, overwrite), True) for f in files]
 
     jobs = []
