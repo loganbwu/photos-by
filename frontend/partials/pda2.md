@@ -1,6 +1,6 @@
 # Pole Dance Artistry Season 2 Media
 
-Thank you for making Pole Dance Artistry Season 2 unforgettable!
+Thank you for competing in Pole Dance Artistry Season 2!
 
 ## Miscellaneous media
 
@@ -19,18 +19,11 @@ There are four purchase options:
 | All photos | $75 |
 | All photos + video edit | $95 |
 
-Videos are edited upon payment, and include sound mixed from original music and the audience. Media are stored for at least 6 months in case you change your order.
-
-Payment can be made to:\
-Name: Logan Wu Business\
-BSB: 062-692\
-Account: 8299 8746
-
-Please include the album ID number(s) in the reference.
+Videos are edited upon payment, and include sound mixed from original music and the audience. Media are stored for at least 3 months in case you change your order.
 
 <a href="https://docs.google.com/forms/d/e/1FAIpQLSctISRPVQekTNp2VcUr69ctZzFA9X618ClTC9XIQ3tiuC6G4g/viewform?usp=publish-editor" target="_blank" class="btn btn-lg">Go to order form</a>
 
-After you submit the form, I will email you with a Google Drive download link.
+After you submit the order form and make payment (details within), I will email you with a Google Drive download link.
 
 ## Next event promotion
 
