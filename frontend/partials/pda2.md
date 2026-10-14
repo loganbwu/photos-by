@@ -8,7 +8,7 @@ Non-performance media (venue, prizegiving, etc) can be viewed <a href="https://p
 
 ## How to order performance media
 
-If you have not seen your photo previews, please get in touch for your link (<a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a> on Instagram or <a href="mailto:loganbwu@gmail.com">loganbwu@gmail.com</a>).
+If you have not seen your photo previews, please get in touch (<a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a> or <a href="mailto:loganbwu@gmail.com">loganbwu@gmail.com</a>).
 
 There are four purchase options:
 
@@ -19,7 +19,7 @@ There are four purchase options:
 | All photos | $75 |
 | All photos + video edit | $95 |
 
-Videos are edited upon payment, and include sound mixed from original music and the audience. Media are stored for at least 3 months in case you change your order.
+Video previews are not available. Videos are edited upon purchase and include sound mixed from original music and the audience. Media are stored for at least 3 months in case you change your order.
 
 <a href="https://docs.google.com/forms/d/e/1FAIpQLSctISRPVQekTNp2VcUr69ctZzFA9X618ClTC9XIQ3tiuC6G4g/viewform?usp=publish-editor" target="_blank" class="btn btn-lg">Go to order form</a>
 
