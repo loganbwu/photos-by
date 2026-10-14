@@ -19,7 +19,7 @@ There are four purchase options:
 | All photos | $75 |
 | All photos + video edit | $95 |
 
-Video previews are not available. Videos are edited upon purchase and include sound mixed from original music and the audience. Media are stored for at least 3 months in case you change your order.
+Video previews are not available because videos are edited upon purchase. Videos include sound mixed from original music and the audience. Media are stored for at least 3 months in case you change your order.
 
 <a href="https://docs.google.com/forms/d/e/1FAIpQLSctISRPVQekTNp2VcUr69ctZzFA9X618ClTC9XIQ3tiuC6G4g/viewform?usp=publish-editor" target="_blank" class="btn btn-lg">Go to order form</a>
 
