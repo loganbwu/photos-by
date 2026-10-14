@@ -42,5 +42,4 @@ Thank you to my team for their support! I love being tagged on Instagram, and yo
 
 Instagram handles of the media team:\
 <a href="https://instagram.com/photosby.loganwu" target="_blank">@photosby.loganwu</a>\
-<a href="https://instagram.com/agathe.white" target="_blank">@agathe.white</a>\
-<a href="https://instagram.com/gillybeanbag" target="_blank">@gillybeanbag</a>
+<a href="https://instagram.com/agathe.white" target="_blank">@agathe.white</a>
