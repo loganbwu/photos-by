@@ -2,9 +2,9 @@
 
 Thank you for competing in Pole Dance Artistry Season 2!
 
-## Miscellaneous media
+## Prizegiving photos
 
-Non-performance media (venue, prizegiving, etc) can be viewed <a href="https://photosby.loganwu.co.nz/albums/?album=00_miscellaneous_pda2" target="_blank"><b>here</b></a> and downloaded free of charge <a href="https://drive.google.com/drive/folders/1NzUAKFbNy26irdDtvFE5wquO5JbskCua?usp=drive_link" target="_blank"><b>here</b></a>.
+Prizegiving photos can be viewed <a href="https://photosby.loganwu.co.nz/albums/?album=00_miscellaneous_pda2" target="_blank"><b>here</b></a> and downloaded free of charge <a href="https://drive.google.com/drive/folders/1NzUAKFbNy26irdDtvFE5wquO5JbskCua?usp=drive_link" target="_blank"><b>here</b></a>.
 
 ## How to order performance media
 
